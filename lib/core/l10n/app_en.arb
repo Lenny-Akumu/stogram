@@ -1,0 +1,19 @@
+{
+  "@@locale": "en",
+  "appTitle": "App",
+  "actionNext": "Next",
+  "actionLogOut": "Log out",
+  "authPhoneTitle": "Sign in",
+  "authPhoneLabel": "Phone number",
+  "authPhoneHint": "+1 …",
+  "authCodeTitle": "Code",
+  "authCodeLabel": "Confirmation code",
+  "authCodeSentTo": "Code sent to {phone}",
+  "authPasswordTitle": "Cloud password",
+  "authPasswordLabel": "Password",
+  "authPasswordHint": "Hint: {hint}",
+  "authUnsupported": "This sign-in method is not supported yet ({type})",
+  "envMissing": "api_id / api_hash missing. Run with --dart-define-from-file=env.json",
+  "tdlibMissing": "Failed to load TDLib: {error}",
+  "chatsPlaceholder": "You're signed in. Chat list comes next."
+}

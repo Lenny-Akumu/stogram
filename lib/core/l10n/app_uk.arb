@@ -1,0 +1,31 @@
+{
+  "@@locale": "uk",
+  "appTitle": "App",
+  "actionNext": "Далі",
+  "actionLogOut": "Вийти",
+  "authPhoneTitle": "Вхід",
+  "authPhoneLabel": "Номер телефону",
+  "authPhoneHint": "+380 …",
+  "authCodeTitle": "Код",
+  "authCodeLabel": "Код підтвердження",
+  "authCodeSentTo": "Код надіслано на {phone}",
+  "@authCodeSentTo": {
+    "placeholders": { "phone": { "type": "String" } }
+  },
+  "authPasswordTitle": "Хмарний пароль",
+  "authPasswordLabel": "Пароль",
+  "authPasswordHint": "Підказка: {hint}",
+  "@authPasswordHint": {
+    "placeholders": { "hint": { "type": "String" } }
+  },
+  "authUnsupported": "Цей спосіб входу ще не підтримується ({type})",
+  "@authUnsupported": {
+    "placeholders": { "type": { "type": "String" } }
+  },
+  "envMissing": "Немає api_id / api_hash. Запусти з --dart-define-from-file=env.json",
+  "tdlibMissing": "Не вдалося завантажити TDLib: {error}",
+  "@tdlibMissing": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "chatsPlaceholder": "Ти в акаунті. Список чатів — наступний крок."
+}
