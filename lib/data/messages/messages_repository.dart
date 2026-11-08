@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '../../core/tdlib/td_api.dart';
 import '../../core/tdlib/td_dispatcher.dart';
+import '../../core/tdlib/td_error.dart';
 import '../chats/chat_summary.dart';
 import 'chat_message.dart';
 
@@ -13,6 +14,9 @@ class MessagesRepository {
   final TdApi _td;
   final int chatId;
   final _byId = <int, ChatMessage>{};
+  final _replies = <int, ChatMessage>{};
+  final _requestedReplies = <int>{};
+  int _lastReadOutbox = 0;
   final _out = StreamController<List<ChatMessage>>.broadcast();
   late final StreamSubscription<TdObject> _sub;
   List<ChatMessage> _current = const [];
@@ -24,8 +28,40 @@ class MessagesRepository {
   Stream<List<ChatMessage>> get messages => _out.stream;
   bool get reachedStart => _reachedStart;
 
+  bool isRead(ChatMessage m) =>
+      m.isOutgoing && m.sendState == SendState.sent && m.id <= _lastReadOutbox;
+
+  /// Message a reply points to, loaded lazily when it is outside the history.
+  ChatMessage? repliedTo(ChatMessage m) {
+    final id = m.replyToId;
+    if (id == null) return null;
+    final found = _byId[id] ?? _replies[id];
+    if (found == null && _requestedReplies.add(id)) unawaited(_fetchReply(id));
+    return found;
+  }
+
+  Future<void> _fetchReply(int id) async {
+    try {
+      final res = await _td.send({
+        '@type': 'getMessage',
+        'chat_id': chatId,
+        'message_id': id,
+      });
+      _replies[id] = ChatMessage.fromJson(res);
+      _emit();
+    } on TdError {
+      // deleted or inaccessible, nothing to show
+    }
+  }
+
   Future<void> open() async {
     await _td.send({'@type': 'openChat', 'chat_id': chatId});
+    try {
+      final chat = await _td.send({'@type': 'getChat', 'chat_id': chatId});
+      _lastReadOutbox = chat['last_read_outbox_message_id'] as int? ?? 0;
+    } on TdError {
+      // ticks just stay single
+    }
     await loadOlder();
   }
 
@@ -64,16 +100,52 @@ class MessagesRepository {
     }
   }
 
-  Future<void> sendText(String text) async {
+  static TdObject _textContent(String text) => {
+    '@type': 'inputMessageText',
+    'text': {'@type': 'formattedText', 'text': text},
+  };
+
+  Future<void> sendText(String text, {int? replyTo}) async {
     final res = await _td.send({
       '@type': 'sendMessage',
       'chat_id': chatId,
-      'input_message_content': {
-        '@type': 'inputMessageText',
-        'text': {'@type': 'formattedText', 'text': text},
-      },
+      'reply_to': ?(replyTo == null
+          ? null
+          : {'@type': 'inputMessageReplyToMessage', 'message_id': replyTo}),
+      'input_message_content': _textContent(text),
     });
     _put(ChatMessage.fromJson(res));
+  }
+
+  Future<void> editText(int messageId, String text) async {
+    final res = await _td.send({
+      '@type': 'editMessageText',
+      'chat_id': chatId,
+      'message_id': messageId,
+      'input_message_content': _textContent(text),
+    });
+    _put(ChatMessage.fromJson(res));
+  }
+
+  Future<void> delete(List<int> ids, {required bool revoke}) => _td.send({
+    '@type': 'deleteMessages',
+    'chat_id': chatId,
+    'message_ids': ids,
+    'revoke': revoke,
+  });
+
+  Future<MessageActions> actions(int messageId) async {
+    try {
+      return MessageActions.fromJson(
+        await _td.send({
+          '@type': 'getMessageProperties',
+          'chat_id': chatId,
+          'message_id': messageId,
+        }),
+      );
+    } on TdError {
+      return const MessageActions(canCopy: true);
+    }
   }
 
   Future<void> markRead() async {
@@ -114,6 +186,9 @@ class MessagesRepository {
         _byId[id] = old.copyWith(
           editDate: DateTime.fromMillisecondsSinceEpoch(edit * 1000),
         );
+        _emit();
+      case 'updateChatReadOutbox':
+        _lastReadOutbox = u['last_read_outbox_message_id'] as int? ?? 0;
         _emit();
       case 'updateDeleteMessages':
         if (u['is_permanent'] != true) return;

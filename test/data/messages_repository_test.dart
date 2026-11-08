@@ -142,4 +142,65 @@ void main() {
     expect(m.content.kind, PreviewKind.sticker);
     expect(m.content.text, '🙂');
   });
+
+  test('reply, edit and delete send the right requests', () async {
+    td.handler = (r) => switch (r['@type']) {
+      'sendMessage' => _msg(5, out: true),
+      'editMessageText' => _msg(5, text: 'new', out: true),
+      _ => {'@type': 'ok'},
+    };
+    await repo.sendText('yo', replyTo: 3);
+    expect(td.sent.last['reply_to'], {
+      '@type': 'inputMessageReplyToMessage',
+      'message_id': 3,
+    });
+
+    await repo.editText(5, 'new');
+    expect(td.sent.last['@type'], 'editMessageText');
+    expect(repo.current.single.content.text, 'new');
+
+    await repo.delete([5], revoke: true);
+    expect(td.sent.last, {
+      '@type': 'deleteMessages',
+      'chat_id': 7,
+      'message_ids': [5],
+      'revoke': true,
+    });
+  });
+
+  test('outgoing becomes read after updateChatReadOutbox', () async {
+    td.push({'@type': 'updateNewMessage', 'message': _msg(4, out: true)});
+    final m = repo.current.single;
+    expect(repo.isRead(m), isFalse);
+    td.push({
+      '@type': 'updateChatReadOutbox',
+      'chat_id': 7,
+      'last_read_outbox_message_id': 4,
+    });
+    expect(repo.isRead(m), isTrue);
+  });
+
+  test('reply target outside history is fetched once', () async {
+    td.handler = (r) => r['@type'] == 'getMessage'
+        ? _msg(1, text: 'original')
+        : {'@type': 'ok'};
+    td.push({
+      '@type': 'updateNewMessage',
+      'message': {
+        ..._msg(9),
+        'reply_to': {
+          '@type': 'messageReplyToMessage',
+          'chat_id': 7,
+          'message_id': 1,
+        },
+      },
+    });
+    final m = repo.current.single;
+    expect(m.replyToId, 1);
+    expect(repo.repliedTo(m), isNull);
+    repo.repliedTo(m);
+    await pumpEventQueue();
+    expect(repo.repliedTo(m)?.content.text, 'original');
+    expect(td.sent.where((r) => r['@type'] == 'getMessage'), hasLength(1));
+  });
 }
