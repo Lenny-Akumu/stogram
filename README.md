@@ -23,3 +23,5 @@ APK — в артефакті `stogram-apk` на сторінці запуску
 ## Linux і Windows
 
 Воркфлоу `Desktop builds` збирає TDLib під кожну платформу (теж з кешем) і кладе його в бандл: `stogram-linux-x64.tar.gz` (розпакуй і запусти `app`) та `stogram-windows-x64.zip` (`app.exe`, поруч `tdjson.dll` з залежностями).
+
+Кожен мерж у `main` публікує реліз `dev-<коміт>` (prerelease) з APK, Linux і Windows збірками.

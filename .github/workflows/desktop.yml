@@ -10,6 +10,9 @@ concurrency:
   group: desktop-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 env:
   TDLIB_COMMIT: 4c6377aa7386c39217878a9a56d581922ad37ca4
   FLUTTER_VERSION: 3.47.9
@@ -74,6 +77,19 @@ jobs:
           name: stogram-linux-x64
           path: stogram-linux-x64.tar.gz
 
+      - name: Publish to release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="dev-${GITHUB_SHA::7}"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --prerelease --title "Dev build $TAG" --notes "Автозбірка з main ($GITHUB_SHA)" ||
+            true
+          gh release upload "$TAG" stogram-linux-x64.tar.gz --repo "$GITHUB_REPOSITORY" --clobber
+
   windows:
     runs-on: windows-2022
     timeout-minutes: 300
@@ -131,3 +147,16 @@ jobs:
         with:
           name: stogram-windows-x64
           path: stogram-windows-x64.zip
+
+      - name: Publish to release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="dev-${GITHUB_SHA::7}"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --prerelease --title "Dev build $TAG" --notes "Автозбірка з main ($GITHUB_SHA)" ||
+            true
+          gh release upload "$TAG" stogram-windows-x64.zip --repo "$GITHUB_REPOSITORY" --clobber

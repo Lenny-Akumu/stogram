@@ -6,6 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
   TDLIB_COMMIT: 4c6377aa7386c39217878a9a56d581922ad37ca4
   TDLIB_NDK: 23.2.8568313
@@ -95,3 +98,18 @@ jobs:
         with:
           name: stogram-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      - run: cp build/app/outputs/flutter-apk/app-release.apk stogram.apk
+
+      - name: Publish to release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="dev-${GITHUB_SHA::7}"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --prerelease --title "Dev build $TAG" --notes "Автозбірка з main ($GITHUB_SHA)" ||
+            true
+          gh release upload "$TAG" stogram.apk --repo "$GITHUB_REPOSITORY" --clobber
