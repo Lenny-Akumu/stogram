@@ -6,10 +6,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-concurrency:
-  group: android-${{ github.ref }}
-  cancel-in-progress: true
-
 env:
   TDLIB_COMMIT: 4c6377aa7386c39217878a9a56d581922ad37ca4
   TDLIB_NDK: 23.2.8568313

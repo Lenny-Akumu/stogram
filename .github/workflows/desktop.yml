@@ -1,0 +1,133 @@
+name: Desktop builds
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TDLIB_COMMIT: 4c6377aa7386c39217878a9a56d581922ad37ca4
+  FLUTTER_VERSION: 3.47.9
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gperf zlib1g-dev libssl-dev clang cmake ninja-build \
+            pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: tdlib-linux
+          key: tdlib-linux-x64-${{ env.TDLIB_COMMIT }}
+
+      - name: Build TDLib
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          git clone https://github.com/tdlib/td.git "$RUNNER_TEMP/td"
+          cd "$RUNNER_TEMP/td"
+          git checkout "$TDLIB_COMMIT"
+          mkdir build && cd build
+          CC=clang CXX=clang++ cmake -GNinja -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build . --target tdjson
+          mkdir -p "$GITHUB_WORKSPACE/tdlib-linux"
+          cp -L libtdjson.so "$GITHUB_WORKSPACE/tdlib-linux/libtdjson.so"
+          strip "$GITHUB_WORKSPACE/tdlib-linux/libtdjson.so"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Write env.json
+        env:
+          TG_API_ID: ${{ secrets.TG_API_ID }}
+          TG_API_HASH: ${{ secrets.TG_API_HASH }}
+        run: |
+          jq -n --arg id "$TG_API_ID" --arg hash "$TG_API_HASH" \
+            '{TG_API_ID: $id, TG_API_HASH: $hash, TDJSON_PATH: ""}' > env.json
+
+      - run: flutter pub get
+      - run: flutter build linux --release --dart-define-from-file=env.json
+
+      - name: Package
+        run: |
+          BUNDLE=build/linux/x64/release/bundle
+          cp tdlib-linux/libtdjson.so "$BUNDLE/lib/"
+          tar -C "$BUNDLE" -czf stogram-linux-x64.tar.gz .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stogram-linux-x64
+          path: stogram-linux-x64.tar.gz
+
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: tdlib-windows
+          key: tdlib-windows-x64-${{ env.TDLIB_COMMIT }}
+
+      - name: Build TDLib
+        if: steps.cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install gperf:x64-windows openssl:x64-windows zlib:x64-windows
+          git clone https://github.com/tdlib/td.git "$env:RUNNER_TEMP\td"
+          cd "$env:RUNNER_TEMP\td"
+          git checkout $env:TDLIB_COMMIT
+          mkdir build
+          cd build
+          cmake -A x64 "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" ..
+          cmake --build . --target tdjson --config Release
+          New-Item -ItemType Directory -Force "$env:GITHUB_WORKSPACE\tdlib-windows" | Out-Null
+          Copy-Item Release\*.dll "$env:GITHUB_WORKSPACE\tdlib-windows\"
+          Get-ChildItem "$env:GITHUB_WORKSPACE\tdlib-windows"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Write env.json
+        shell: pwsh
+        env:
+          TG_API_ID: ${{ secrets.TG_API_ID }}
+          TG_API_HASH: ${{ secrets.TG_API_HASH }}
+        run: |
+          @{ TG_API_ID = "$env:TG_API_ID"; TG_API_HASH = "$env:TG_API_HASH"; TDJSON_PATH = "" } |
+            ConvertTo-Json | Set-Content -Encoding utf8NoBOM env.json
+
+      - run: flutter pub get
+      - run: flutter build windows --release --dart-define-from-file=env.json
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $out = "build\windows\x64\runner\Release"
+          Copy-Item tdlib-windows\*.dll $out
+          Compress-Archive -Path "$out\*" -DestinationPath stogram-windows-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stogram-windows-x64
+          path: stogram-windows-x64.zip
