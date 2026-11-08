@@ -8,14 +8,6 @@
   "authPhoneHint": "+380 …",
   "authCodeTitle": "Код",
   "authCodeLabel": "Код підтвердження",
-  "authCodeSentTo": "Код надіслано на {phone}",
-  "@authCodeSentTo": {
-    "placeholders": {
-      "phone": {
-        "type": "String"
-      }
-    }
-  },
   "authPasswordTitle": "Хмарний пароль",
   "authPasswordLabel": "Пароль",
   "authPasswordHint": "Підказка: {hint}",
@@ -69,6 +61,142 @@
     "placeholders": {
       "error": {
         "type": "String"
+      }
+    }
+  },
+  "authQrButton": "Увійти через QR-код",
+  "authQrTitle": "Вхід через QR",
+  "authQrSteps": "Відкрий Telegram на телефоні → Налаштування → Пристрої → Підключити пристрій і відскануй цей код.",
+  "authUsePhone": "Увійти за номером",
+  "authChangePhone": "Змінити номер",
+  "codeViaTelegram": "Код надіслано в Telegram на іншому твоєму пристрої. Перевір чат «Telegram» там.",
+  "codeViaSms": "Код надіслано SMS на {phone}",
+  "codeSmsHint": "Код починається з «{hint}»",
+  "codeViaCall": "Тобі зателефонують на {phone} і продиктують код",
+  "codeViaFlashCall": "Чекай дзвінок на {phone}: номер, з якого дзвонять, і є код",
+  "codeViaMissedCall": "Чекай дзвінок з номера {prefix}… — останні цифри цього номера і є код",
+  "codeViaFragment": "Код надіслано на fragment.com: {url}",
+  "codeViaUnknown": "Код надіслано на {phone}",
+  "resendSms": "Надіслати SMS",
+  "resendCall": "Подзвонити мені",
+  "resendOther": "Надіслати код іншим способом",
+  "resendIn": "Повторно через {seconds} с",
+  "authEmailTitle": "Пошта",
+  "authEmailSubtitle": "Для входу потрібно прив'язати пошту до акаунта",
+  "authEmailLabel": "Email",
+  "authEmailCodeTitle": "Код з пошти",
+  "authEmailCodeSentTo": "Код надіслано на {pattern}",
+  "authResendEmail": "Надіслати ще раз",
+  "authRegisterTitle": "Новий акаунт",
+  "authFirstName": "Ім'я",
+  "authLastName": "Прізвище (необов'язково)",
+  "authTerms": "Умови використання",
+  "authPasswordRecovery": "Відновлювальна пошта: {pattern}",
+  "errPhoneInvalid": "Неправильний номер телефону",
+  "errCodeInvalid": "Неправильний код",
+  "errCodeExpired": "Код протермінований, запроси новий",
+  "errPasswordInvalid": "Неправильний пароль",
+  "errEmailInvalid": "Неправильна адреса пошти",
+  "errFlood": "Забагато спроб. Спробуй через {time}",
+  "errNameInvalid": "Вкажи ім'я",
+  "durationSeconds": "{n} с",
+  "durationMinutes": "{n} хв",
+  "durationHours": "{n} год",
+  "@codeViaSms": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "@codeSmsHint": {
+    "placeholders": {
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
+  "@codeViaCall": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "@codeViaFlashCall": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "@codeViaMissedCall": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      }
+    }
+  },
+  "@codeViaFragment": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "@codeViaUnknown": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "@resendIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "@authEmailCodeSentTo": {
+    "placeholders": {
+      "pattern": {
+        "type": "String"
+      }
+    }
+  },
+  "@authPasswordRecovery": {
+    "placeholders": {
+      "pattern": {
+        "type": "String"
+      }
+    }
+  },
+  "@errFlood": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "@durationSeconds": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "@durationMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "@durationHours": {
+    "placeholders": {
+      "n": {
+        "type": "int"
       }
     }
   }

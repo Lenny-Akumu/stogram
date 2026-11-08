@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/util/streams.dart';
+import '../core/config.dart';
 import '../core/tdlib/td_api.dart';
 import '../data/auth/auth_repository.dart';
 import '../data/auth/auth_state.dart';
@@ -9,6 +10,8 @@ import '../data/chats/chats_repository.dart';
 import '../data/messages/chat_message.dart';
 import '../data/messages/messages_repository.dart';
 import '../data/users/users_repository.dart';
+
+final envConfiguredProvider = Provider<bool>((_) => Env.isConfigured);
 
 final tdApiProvider = Provider<TdApi>(
   (ref) => throw UnimplementedError('override in ProviderScope'),

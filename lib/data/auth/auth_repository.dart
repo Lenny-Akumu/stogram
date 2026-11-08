@@ -65,11 +65,20 @@ class AuthRepository {
       'api_id': Env.apiId,
       'api_hash': Env.apiHash,
       'system_language_code': PlatformDispatcher.instance.locale.languageCode,
-      'device_model': Platform.operatingSystem,
-      'system_version': '',
+      'device_model': _deviceModel(),
+      'system_version': Platform.operatingSystemVersion,
       'application_version': '0.1.0',
     });
   }
+
+  static String _deviceModel() => switch (Platform.operatingSystem) {
+    'linux' => 'Linux',
+    'windows' => 'Windows',
+    'android' => 'Android',
+    'macos' => 'macOS',
+    'ios' => 'iOS',
+    final os => os,
+  };
 
   Future<void> setPhone(String phone) => _td.send({
     '@type': 'setAuthenticationPhoneNumber',
@@ -81,6 +90,31 @@ class AuthRepository {
 
   Future<void> checkPassword(String password) =>
       _td.send({'@type': 'checkAuthenticationPassword', 'password': password});
+
+  Future<void> resendCode() =>
+      _td.send({'@type': 'resendAuthenticationCode', 'reason': null});
+
+  Future<void> setEmail(String email) => _td.send({
+    '@type': 'setAuthenticationEmailAddress',
+    'email_address': email,
+  });
+
+  Future<void> checkEmailCode(String code) => _td.send({
+    '@type': 'checkAuthenticationEmailCode',
+    'code': {'@type': 'emailAddressAuthenticationCode', 'code': code},
+  });
+
+  Future<void> requestQr() => _td.send({
+    '@type': 'requestQrCodeAuthentication',
+    'other_user_ids': <int>[],
+  });
+
+  Future<void> register(String firstName, String lastName) => _td.send({
+    '@type': 'registerUser',
+    'first_name': firstName,
+    'last_name': lastName,
+    'disable_notification': false,
+  });
 
   Future<void> logOut() => _td.send({'@type': 'logOut'});
 
