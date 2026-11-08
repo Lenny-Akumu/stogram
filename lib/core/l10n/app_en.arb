@@ -73,5 +73,15 @@
   "errNameInvalid": "Enter a first name",
   "durationSeconds": "{n}s",
   "durationMinutes": "{n} min",
-  "durationHours": "{n} h"
+  "durationHours": "{n} h",
+  "actionReply": "Reply",
+  "actionCopy": "Copy",
+  "actionEdit": "Edit",
+  "actionDelete": "Delete",
+  "actionCancel": "Cancel",
+  "actionSave": "Save",
+  "copied": "Copied",
+  "deleteTitle": "Delete message?",
+  "deleteForEveryone": "Also delete for everyone",
+  "editing": "Editing"
 }

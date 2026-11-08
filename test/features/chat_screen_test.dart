@@ -88,4 +88,68 @@ void main() {
 
     expect(find.text('як ти'), findsOneWidget);
   });
+
+  testWidgets('long press reply sends with reply_to', (tester) async {
+    final td = FakeTd()
+      ..handler = (r) => switch (r['@type']) {
+        'getChatHistory' when r['from_message_id'] == 0 => {
+          'messages': [_msg(2, 'привіт')],
+        },
+        'getChatHistory' => {'messages': <Object>[]},
+        'getMessageProperties' => {
+          'can_be_replied': true,
+          'can_be_copied': true,
+        },
+        'sendMessage' => _msg(3, 'ага', out: true),
+        _ => {'@type': 'ok'},
+      };
+    await tester.pumpWidget(_app(td));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('uk'));
+
+    await tester.longPress(find.text('привіт'));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.actionEdit), findsNothing);
+    await tester.tap(find.text(l10n.actionReply));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'ага');
+    await tester.tap(find.byIcon(Icons.arrow_upward));
+    await tester.pumpAndSettle();
+
+    final req = td.sent.lastWhere((r) => r['@type'] == 'sendMessage');
+    expect((req['reply_to'] as Map)['message_id'], 2);
+  });
+
+  testWidgets('edit prefills the composer and saves', (tester) async {
+    final td = FakeTd()
+      ..handler = (r) => switch (r['@type']) {
+        'getChatHistory' when r['from_message_id'] == 0 => {
+          'messages': [_msg(2, 'опечтака', out: true)],
+        },
+        'getChatHistory' => {'messages': <Object>[]},
+        'getMessageProperties' => {'can_be_edited': true},
+        'editMessageText' => _msg(2, 'опечатка', out: true),
+        _ => {'@type': 'ok'},
+      };
+    await tester.pumpWidget(_app(td));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('uk'));
+
+    await tester.longPress(find.text('опечтака'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.actionEdit));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      'опечтака',
+    );
+
+    await tester.enterText(find.byType(TextField), 'опечатка');
+    await tester.tap(find.byIcon(Icons.check));
+    await tester.pumpAndSettle();
+
+    expect(td.sent.last['@type'], 'editMessageText');
+    expect(find.text('опечатка'), findsOneWidget);
+  });
 }

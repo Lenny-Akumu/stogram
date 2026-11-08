@@ -13,11 +13,16 @@ class ChatMessage {
     required this.editDate,
     required this.content,
     required this.sendState,
+    this.replyToId,
   });
 
   factory ChatMessage.fromJson(TdObject json) {
     final sender = json['sender_id'] as TdObject?;
     final sending = (json['sending_state'] as TdObject?)?['@type'];
+    final reply = json['reply_to'] as TdObject?;
+    final sameChatReply =
+        reply?['@type'] == 'messageReplyToMessage' &&
+        (reply?['chat_id'] == json['chat_id'] || reply?['chat_id'] == 0);
     return ChatMessage(
       id: json['id'] as int,
       chatId: json['chat_id'] as int,
@@ -33,6 +38,7 @@ class ChatMessage {
         'messageSendingStateFailed' => SendState.failed,
         _ => SendState.sent,
       },
+      replyToId: sameChatReply ? reply!['message_id'] as int? : null,
     );
   }
 
@@ -44,6 +50,7 @@ class ChatMessage {
   final DateTime? editDate;
   final MessagePreview content;
   final SendState sendState;
+  final int? replyToId;
 
   bool get isEdited => editDate != null;
 
@@ -60,8 +67,35 @@ class ChatMessage {
     editDate: editDate ?? this.editDate,
     content: content ?? this.content,
     sendState: sendState ?? this.sendState,
+    replyToId: replyToId,
   );
 
   static DateTime _time(Object? seconds) =>
       DateTime.fromMillisecondsSinceEpoch(((seconds as int?) ?? 0) * 1000);
+}
+
+class MessageActions {
+  const MessageActions({
+    this.canReply = false,
+    this.canEdit = false,
+    this.canCopy = false,
+    this.canDeleteForSelf = false,
+    this.canDeleteForAll = false,
+  });
+
+  factory MessageActions.fromJson(TdObject json) => MessageActions(
+    canReply: json['can_be_replied'] == true,
+    canEdit: json['can_be_edited'] == true,
+    canCopy: json['can_be_copied'] != false,
+    canDeleteForSelf: json['can_be_deleted_only_for_self'] == true,
+    canDeleteForAll: json['can_be_deleted_for_all_users'] == true,
+  );
+
+  final bool canReply;
+  final bool canEdit;
+  final bool canCopy;
+  final bool canDeleteForSelf;
+  final bool canDeleteForAll;
+
+  bool get canDelete => canDeleteForSelf || canDeleteForAll;
 }

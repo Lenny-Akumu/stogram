@@ -199,5 +199,15 @@
         "type": "int"
       }
     }
-  }
+  },
+  "actionReply": "Відповісти",
+  "actionCopy": "Копіювати",
+  "actionEdit": "Редагувати",
+  "actionDelete": "Видалити",
+  "actionCancel": "Скасувати",
+  "actionSave": "Зберегти",
+  "copied": "Скопійовано",
+  "deleteTitle": "Видалити повідомлення?",
+  "deleteForEveryone": "Також видалити для всіх",
+  "editing": "Редагування"
 }
