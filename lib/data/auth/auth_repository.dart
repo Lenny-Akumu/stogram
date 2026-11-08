@@ -69,10 +69,8 @@ class AuthRepository {
   Future<void> checkCode(String code) =>
       _td.send({'@type': 'checkAuthenticationCode', 'code': code});
 
-  Future<void> checkPassword(String password) => _td.send({
-    '@type': 'checkAuthenticationPassword',
-    'password': password,
-  });
+  Future<void> checkPassword(String password) =>
+      _td.send({'@type': 'checkAuthenticationPassword', 'password': password});
 
   Future<void> logOut() => _td.send({'@type': 'logOut'});
 
