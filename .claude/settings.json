@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter:*)",
+      "Bash(dart:*)",
+      "Bash(/home/user/flutter/bin/flutter:*)",
+      "Bash(/home/user/flutter/bin/dart:*)"
+    ]
+  }
+}
