@@ -7,6 +7,7 @@ import '../data/auth/auth_repository.dart';
 import '../data/auth/auth_state.dart';
 import '../data/chats/chat_summary.dart';
 import '../data/chats/chats_repository.dart';
+import '../data/files/files_repository.dart';
 import '../data/messages/chat_message.dart';
 import '../data/messages/messages_repository.dart';
 import '../data/users/users_repository.dart';
@@ -57,3 +58,9 @@ final messagesProvider = StreamProvider.autoDispose
       final repo = ref.watch(messagesRepositoryProvider(chatId));
       return currentThen(() => repo.current, repo.messages);
     });
+
+final filesRepositoryProvider = Provider<FilesRepository>((ref) {
+  final repo = FilesRepository(ref.watch(tdApiProvider));
+  ref.onDispose(repo.dispose);
+  return repo;
+});

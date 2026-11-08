@@ -5,6 +5,7 @@ import '../../core/tdlib/td_dispatcher.dart';
 import '../../core/tdlib/td_error.dart';
 import '../chats/chat_summary.dart';
 import 'chat_message.dart';
+import 'message_media.dart';
 
 class MessagesRepository {
   MessagesRepository(this._td, this.chatId) {
@@ -174,8 +175,10 @@ class MessagesRepository {
         final id = u['message_id'] as int;
         final old = _byId[id];
         if (old == null) return;
+        final content = u['new_content'] as TdObject;
         _byId[id] = old.copyWith(
-          content: MessagePreview.fromContent(u['new_content'] as TdObject),
+          content: MessagePreview.fromContent(content),
+          media: MessageMedia.fromContent(content),
         );
         _emit();
       case 'updateMessageEdited':

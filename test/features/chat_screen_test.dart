@@ -152,4 +152,52 @@ void main() {
     expect(td.sent.last['@type'], 'editMessageText');
     expect(find.text('опечатка'), findsOneWidget);
   });
+
+  testWidgets('photo message downloads its file and shows caption', (
+    tester,
+  ) async {
+    final td = FakeTd()
+      ..handler = (r) => switch (r['@type']) {
+        'getChatHistory' when r['from_message_id'] == 0 => {
+          'messages': [
+            {
+              ..._msg(2, ''),
+              'content': {
+                '@type': 'messagePhoto',
+                'caption': {'text': 'море'},
+                'photo': {
+                  'sizes': [
+                    {
+                      'type': 'x',
+                      'width': 800,
+                      'height': 600,
+                      'photo': {
+                        'id': 77,
+                        'size': 10,
+                        'local': {'path': ''},
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+        'getChatHistory' => {'messages': <Object>[]},
+        'downloadFile' => {
+          'id': 77,
+          'size': 10,
+          'local': {'path': ''},
+        },
+        _ => {'@type': 'ok'},
+      };
+    await tester.pumpWidget(_app(td));
+    await tester.pumpAndSettle();
+
+    expect(find.text('море'), findsOneWidget);
+    expect(
+      td.sent.where((r) => r['@type'] == 'downloadFile').single['file_id'],
+      77,
+    );
+  });
 }

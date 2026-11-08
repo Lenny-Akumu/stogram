@@ -10,8 +10,10 @@ import '../../app/providers.dart';
 import '../../core/l10n/l10n.dart';
 import '../../core/tdlib/td_error.dart';
 import '../../data/messages/chat_message.dart';
+import '../../data/messages/message_media.dart';
 import '../../data/messages/messages_repository.dart';
 import '../../ui/components/preview_text.dart';
+import 'media_view.dart';
 
 enum _Mode { send, reply, edit }
 
@@ -318,6 +320,7 @@ class _Bubble extends ConsumerWidget {
         ? null
         : users.nameOf(message.senderUserId!);
     final reply = replied;
+    final media = message.media;
 
     return Align(
       alignment: out ? Alignment.centerRight : Alignment.centerLeft,
@@ -332,7 +335,11 @@ class _Bubble extends ConsumerWidget {
             margin: const EdgeInsets.symmetric(vertical: 2),
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
             decoration: BoxDecoration(
-              color: out ? scheme.primary : scheme.surfaceContainerHighest,
+              color: media is StickerMedia
+                  ? Colors.transparent
+                  : out
+                  ? scheme.primary
+                  : scheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
@@ -370,10 +377,27 @@ class _Bubble extends ConsumerWidget {
                       ),
                     ),
                   ),
-                Text(
-                  previewText(context, message.content),
-                  style: TextStyle(color: fg, fontSize: 15),
-                ),
+                if (media != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: DefaultTextStyle.merge(
+                      style: TextStyle(color: fg),
+                      child: IconTheme.merge(
+                        data: IconThemeData(color: fg),
+                        child: MediaView(
+                          media: media,
+                          maxWidth: MediaQuery.sizeOf(context).width * 0.7,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (media == null || message.content.text.isNotEmpty)
+                  Text(
+                    media == null
+                        ? previewText(context, message.content)
+                        : message.content.text,
+                    style: TextStyle(color: fg, fontSize: 15),
+                  ),
                 const SizedBox(height: 2),
                 Row(
                   mainAxisSize: MainAxisSize.min,

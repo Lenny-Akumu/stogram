@@ -3,6 +3,7 @@ import 'dart:async';
 import '../../core/tdlib/td_api.dart';
 import '../../core/tdlib/td_dispatcher.dart';
 import '../../core/tdlib/td_error.dart';
+import '../messages/message_media.dart';
 import 'chat_summary.dart';
 
 class _Chat {
@@ -14,6 +15,7 @@ class _Chat {
   bool isPinned = false;
   int unreadCount = 0;
   bool isGroup = false;
+  MediaImage? photo;
   TdObject? lastMessage;
 }
 
@@ -67,8 +69,11 @@ class ChatsRepository {
         final entry = _chats[id] = _Chat(id, c['title'] as String? ?? '')
           ..unreadCount = c['unread_count'] as int? ?? 0
           ..isGroup = _isGroup(c['type'] as TdObject?)
+          ..photo = chatPhoto(c['photo'] as TdObject?)
           ..lastMessage = c['last_message'] as TdObject?;
         _applyPositions(entry, c['positions']);
+      case 'updateChatPhoto' when chat != null:
+        chat.photo = chatPhoto(u['photo'] as TdObject?);
       case 'updateChatTitle' when chat != null:
         chat.title = u['title'] as String? ?? '';
       case 'updateChatPosition' when chat != null:
@@ -141,6 +146,7 @@ class ChatsRepository {
           isPinned: c.isPinned,
           unreadCount: c.unreadCount,
           isGroup: c.isGroup,
+          photo: c.photo,
           preview: switch (c.lastMessage?['content']) {
             final TdObject content => MessagePreview.fromContent(content),
             _ => null,
