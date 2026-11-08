@@ -1,4 +1,5 @@
 import '../../core/tdlib/td_dispatcher.dart';
+import '../messages/message_media.dart';
 
 enum PreviewKind {
   text,
@@ -65,6 +66,7 @@ class ChatSummary {
     required this.preview,
     required this.date,
     this.isGroup = false,
+    this.photo,
   });
 
   final int id;
@@ -75,4 +77,15 @@ class ChatSummary {
   final MessagePreview? preview;
   final DateTime? date;
   final bool isGroup;
+  final MediaImage? photo;
+}
+
+MediaImage? chatPhoto(TdObject? info) {
+  if (info == null) return null;
+  final small = info['small'] as TdObject?;
+  return MediaImage(
+    fileId: small?['id'] as int?,
+    mini: decodeMini(info['minithumbnail'] as TdObject?),
+    file: small,
+  );
 }

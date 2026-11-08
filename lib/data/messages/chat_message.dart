@@ -1,5 +1,6 @@
 import '../../core/tdlib/td_dispatcher.dart';
 import '../chats/chat_summary.dart';
+import 'message_media.dart';
 
 enum SendState { sent, pending, failed }
 
@@ -14,6 +15,7 @@ class ChatMessage {
     required this.content,
     required this.sendState,
     this.replyToId,
+    this.media,
   });
 
   factory ChatMessage.fromJson(TdObject json) {
@@ -39,6 +41,7 @@ class ChatMessage {
         _ => SendState.sent,
       },
       replyToId: sameChatReply ? reply!['message_id'] as int? : null,
+      media: MessageMedia.fromContent(json['content'] as TdObject),
     );
   }
 
@@ -51,11 +54,13 @@ class ChatMessage {
   final MessagePreview content;
   final SendState sendState;
   final int? replyToId;
+  final MessageMedia? media;
 
   bool get isEdited => editDate != null;
 
   ChatMessage copyWith({
     MessagePreview? content,
+    MessageMedia? media,
     DateTime? editDate,
     SendState? sendState,
   }) => ChatMessage(
@@ -68,6 +73,7 @@ class ChatMessage {
     content: content ?? this.content,
     sendState: sendState ?? this.sendState,
     replyToId: replyToId,
+    media: content == null ? this.media : media,
   );
 
   static DateTime _time(Object? seconds) =>

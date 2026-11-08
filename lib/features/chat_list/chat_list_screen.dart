@@ -7,6 +7,7 @@ import '../../app/router.dart';
 import '../../core/l10n/l10n.dart';
 import '../../core/util/chat_date.dart';
 import '../../data/chats/chat_summary.dart';
+import '../../ui/components/avatar.dart';
 import '../../ui/components/preview_text.dart';
 
 class ChatListScreen extends ConsumerStatefulWidget {
@@ -97,6 +98,7 @@ class _ChatTile extends StatelessWidget {
 
     return ListTile(
       onTap: () => context.push(Routes.chat(chat.id)),
+      leading: Avatar(id: chat.id, title: chat.title, photo: chat.photo),
       title: Row(
         children: [
           if (chat.isPinned)
