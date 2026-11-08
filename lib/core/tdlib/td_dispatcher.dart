@@ -6,6 +6,8 @@ import 'td_error.dart';
 typedef TdObject = Map<String, dynamic>;
 
 class TdDispatcher {
+  int? clientId;
+
   final _pending = <String, Completer<TdObject>>{};
   final _updates = StreamController<TdObject>.broadcast();
   var _seq = 0;
@@ -21,7 +23,8 @@ class TdDispatcher {
 
   void handle(String raw) {
     final obj = jsonDecode(raw) as TdObject;
-    obj.remove('@client_id');
+    final from = obj.remove('@client_id');
+    if (clientId != null && from != null && from != clientId) return;
     final extra = obj.remove('@extra');
     final completer = extra == null ? null : _pending.remove('$extra');
     if (completer == null) {

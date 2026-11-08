@@ -15,8 +15,8 @@ sealed class AuthState {
         hint: json['password_hint'] as String? ?? '',
       ),
       'authorizationStateReady' => const AuthReady(),
-      'authorizationStateLoggingOut' => const AuthLoggingOut(),
-      'authorizationStateClosing' ||
+      'authorizationStateLoggingOut' ||
+      'authorizationStateClosing' => const AuthLoggingOut(),
       'authorizationStateClosed' => const AuthClosed(),
       final type => AuthUnsupported(type as String? ?? ''),
     };

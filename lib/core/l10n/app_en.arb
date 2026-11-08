@@ -15,5 +15,20 @@
   "authUnsupported": "This sign-in method is not supported yet ({type})",
   "envMissing": "api_id / api_hash missing. Run with --dart-define-from-file=env.json",
   "tdlibMissing": "Failed to load TDLib: {error}",
-  "chatsPlaceholder": "You're signed in. Chat list comes next."
+  "chatsTitle": "Chats",
+  "chatsEmpty": "No chats yet",
+  "chatsLoadError": "Failed to load chats",
+  "previewPhoto": "Photo",
+  "previewVideo": "Video",
+  "previewVoice": "Voice message",
+  "previewVideoNote": "Video message",
+  "previewSticker": "Sticker",
+  "previewGif": "GIF",
+  "previewAudio": "Audio",
+  "previewDocument": "File",
+  "previewLocation": "Location",
+  "previewContact": "Contact",
+  "previewPoll": "Poll",
+  "previewOther": "Message",
+  "chatUntitled": "Untitled"
 }

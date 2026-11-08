@@ -2,13 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:isolate';
 
+import 'td_api.dart';
 import 'td_dispatcher.dart';
 import 'td_native.dart';
 
+export 'td_api.dart';
 export 'td_dispatcher.dart' show TdObject;
 export 'td_error.dart';
 
-class TdClient {
+class TdClient implements TdApi {
   TdClient._(
     this._native,
     this._clientId,
@@ -19,12 +21,13 @@ class TdClient {
   );
 
   final TdNative _native;
-  final int _clientId;
+  int _clientId;
   final TdDispatcher _dispatcher;
   final Isolate _isolate;
   final ReceivePort _port;
   final SendPort _control;
 
+  @override
   Stream<TdObject> get updates => _dispatcher.updates;
 
   static Future<TdClient> start({String? libPath}) async {
@@ -33,7 +36,7 @@ class TdClient {
       jsonEncode({'@type': 'setLogVerbosityLevel', 'new_verbosity_level': 1}),
     );
     final clientId = native.createClientId();
-    final dispatcher = TdDispatcher();
+    final dispatcher = TdDispatcher()..clientId = clientId;
     final port = ReceivePort();
     final control = Completer<SendPort>();
     port.listen((msg) {
@@ -54,10 +57,17 @@ class TdClient {
     );
   }
 
+  @override
   Future<TdObject> send(TdObject request) {
     final (id, future) = _dispatcher.register();
     _native.send(_clientId, jsonEncode({...request, '@extra': id}));
     return future;
+  }
+
+  @override
+  void reopen() {
+    _clientId = _native.createClientId();
+    _dispatcher.clientId = _clientId;
   }
 
   TdObject? execute(TdObject request) {
