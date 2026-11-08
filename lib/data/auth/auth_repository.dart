@@ -15,14 +15,10 @@ class AuthRepository {
         .listen(
           (u) => _set(AuthState.fromJson(u['authorization_state'] as TdObject)),
         );
-    unawaited(
-      _td
-          .send({'@type': 'getAuthorizationState'})
-          .then((s) => _set(AuthState.fromJson(s)), onError: (Object _) {}),
-    );
+    unawaited(_requestState());
   }
 
-  final TdClient _td;
+  final TdApi _td;
   final _states = StreamController<AuthState>.broadcast();
   late final StreamSubscription<TdObject> _sub;
   AuthState _current = const AuthLoading();
@@ -37,6 +33,20 @@ class AuthRepository {
     if (state is AuthWaitParams && !_paramsSent) {
       _paramsSent = true;
       unawaited(_sendParams());
+    } else if (state is AuthClosed) {
+      _paramsSent = false;
+      _td.reopen();
+      unawaited(_requestState());
+    }
+  }
+
+  Future<void> _requestState() async {
+    try {
+      _set(
+        AuthState.fromJson(await _td.send({'@type': 'getAuthorizationState'})),
+      );
+    } on TdError {
+      // the update stream will deliver the state anyway
     }
   }
 
