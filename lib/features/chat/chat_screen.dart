@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -223,6 +225,13 @@ class _Composer extends StatefulWidget {
   State<_Composer> createState() => _ComposerState();
 }
 
+bool get _isDesktop => switch (defaultTargetPlatform) {
+  TargetPlatform.linux ||
+  TargetPlatform.windows ||
+  TargetPlatform.macOS => true,
+  _ => false,
+};
+
 class _ComposerState extends State<_Composer> {
   final _controller = TextEditingController();
 
@@ -260,16 +269,22 @@ class _ComposerState extends State<_Composer> {
         child: Row(
           children: [
             Expanded(
-              child: TextField(
-                controller: _controller,
-                minLines: 1,
-                maxLines: 6,
-                textInputAction: TextInputAction.newline,
-                decoration: InputDecoration(
-                  hintText: context.l10n.composerHint,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
+              child: CallbackShortcuts(
+                bindings: {
+                  if (_isDesktop)
+                    const SingleActivator(LogicalKeyboardKey.enter): _send,
+                },
+                child: TextField(
+                  controller: _controller,
+                  minLines: 1,
+                  maxLines: 6,
+                  textInputAction: TextInputAction.newline,
+                  decoration: InputDecoration(
+                    hintText: context.l10n.composerHint,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                  ),
                 ),
               ),
             ),

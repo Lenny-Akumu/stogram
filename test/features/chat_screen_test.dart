@@ -2,7 +2,9 @@ import 'package:app/app/app.dart';
 import 'package:app/app/providers.dart';
 import 'package:app/core/l10n/l10n.dart';
 import 'package:app/features/chat/chat_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -20,7 +22,38 @@ Map<String, dynamic> _msg(int id, String text, {bool out = false}) => {
   },
 };
 
+Widget _app(FakeTd td) => ProviderScope(
+  overrides: [tdApiProvider.overrideWithValue(td)],
+  child: const MaterialApp(
+    locale: Locale('uk'),
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: appLocalizationDelegates,
+    home: ChatScreen(chatId: 7),
+  ),
+);
+
 void main() {
+  testWidgets('enter sends on desktop', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final td = FakeTd()
+      ..handler = (r) => switch (r['@type']) {
+        'getChatHistory' => {'messages': <Object>[]},
+        'sendMessage' => _msg(3, 'enter', out: true),
+        _ => {'@type': 'ok'},
+      };
+    await tester.pumpWidget(_app(td));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'enter');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+
+    expect(td.sent.map((r) => r['@type']), contains('sendMessage'));
+    expect(find.text('enter'), findsOneWidget);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
   testWidgets('shows history and sends text', (tester) async {
     final td = FakeTd()
       ..handler = (r) => switch (r['@type']) {
