@@ -3,10 +3,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/l10n/l10n.dart';
+import 'providers.dart';
 import 'router.dart';
 import 'theme.dart';
 
-const _delegates = [
+const appLocalizationDelegates = [
   AppLocalizations.delegate,
   GlobalMaterialLocalizations.delegate,
   GlobalWidgetsLocalizations.delegate,
@@ -18,10 +19,12 @@ class App extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // subscribe before TDLib starts pushing updateNewChat
+    ref.watch(chatsRepositoryProvider);
     return MaterialApp.router(
       onGenerateTitle: (context) => context.l10n.appTitle,
       theme: buildBaseTheme(),
-      localizationsDelegates: _delegates,
+      localizationsDelegates: appLocalizationDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('uk'),
       routerConfig: ref.watch(routerProvider),
@@ -38,7 +41,7 @@ class FatalApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: buildBaseTheme(),
-      localizationsDelegates: _delegates,
+      localizationsDelegates: appLocalizationDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('uk'),
       home: Builder(

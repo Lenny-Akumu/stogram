@@ -14,11 +14,14 @@ ThemeData buildBaseTheme() {
     colorScheme: const ColorScheme.dark(
       surface: bg,
       onSurface: fg,
+      onSurfaceVariant: muted,
       primary: fg,
       onPrimary: bg,
       error: accent,
+      onError: fg,
       outline: line,
     ),
+    appBarTheme: const AppBarTheme(backgroundColor: bg, foregroundColor: fg),
     inputDecorationTheme: const InputDecorationTheme(
       labelStyle: TextStyle(color: muted),
       hintStyle: TextStyle(color: muted),
