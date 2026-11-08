@@ -64,6 +64,7 @@ class ChatSummary {
     required this.unreadCount,
     required this.preview,
     required this.date,
+    this.isGroup = false,
   });
 
   final int id;
@@ -73,4 +74,5 @@ class ChatSummary {
   final int unreadCount;
   final MessagePreview? preview;
   final DateTime? date;
+  final bool isGroup;
 }
