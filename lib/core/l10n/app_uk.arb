@@ -1,6 +1,6 @@
 {
   "@@locale": "uk",
-  "appTitle": "App",
+  "appTitle": "Stogram",
   "actionNext": "Далі",
   "actionLogOut": "Вийти",
   "authPhoneTitle": "Вхід",
@@ -58,5 +58,18 @@
   "previewContact": "Контакт",
   "previewPoll": "Опитування",
   "previewOther": "Повідомлення",
-  "chatUntitled": "Без назви"
+  "chatUntitled": "Без назви",
+  "composerHint": "Повідомлення",
+  "messageEdited": "ред.",
+  "messageSendFailed": "Не надіслано",
+  "chatSendError": "Не вдалося надіслати: {error}",
+  "chatHistoryEmpty": "Тут поки порожньо",
+  "actionSend": "Надіслати",
+  "@chatSendError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
 }

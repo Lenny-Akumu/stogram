@@ -1,0 +1,115 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  TDLIB_COMMIT: 4c6377aa7386c39217878a9a56d581922ad37ca4
+  TDLIB_NDK: 23.2.8568313
+  TDLIB_API: 24
+  TDLIB_ABIS: arm64-v8a armeabi-v7a
+
+jobs:
+  tdlib:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    steps:
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: tdlib-android
+          key: tdlib-android-${{ env.TDLIB_COMMIT }}-api${{ env.TDLIB_API }}-arm64-armv7
+
+      - name: Free disk space
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+
+      - name: Install build tools
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gperf php-cli
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --install \
+            "ndk;$TDLIB_NDK" "cmake;3.22.1" "build-tools;34.0.0" "platforms;android-34" > /dev/null
+
+      - name: Build TDLib
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          git clone https://github.com/tdlib/td.git "$RUNNER_TEMP/td"
+          cd "$RUNNER_TEMP/td"
+          git checkout "$TDLIB_COMMIT"
+          cd example/android
+          ./build-openssl.sh "$ANDROID_SDK_ROOT" "$TDLIB_NDK" third-party/openssl
+          ./build-tdlib.sh "$ANDROID_SDK_ROOT" "$TDLIB_NDK" third-party/openssl c++_static JSON "$TDLIB_API" "$TDLIB_ABIS"
+          mkdir -p "$GITHUB_WORKSPACE/tdlib-android"
+          cp -r tdlib/libs/* "$GITHUB_WORKSPACE/tdlib-android/"
+
+      - run: ls -lR tdlib-android
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tdlib-android
+          path: tdlib-android
+          retention-days: 1
+
+  apk:
+    needs: tdlib
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: tdlib-android
+          path: android/app/src/main/jniLibs
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+          cache: true
+
+      - name: Write env.json
+        env:
+          TG_API_ID: ${{ secrets.TG_API_ID }}
+          TG_API_HASH: ${{ secrets.TG_API_HASH }}
+        run: |
+          jq -n --arg id "$TG_API_ID" --arg hash "$TG_API_HASH" \
+            '{TG_API_ID: $id, TG_API_HASH: $hash, TDJSON_PATH: ""}' > env.json
+          if [ -z "$TG_API_ID" ]; then echo "::warning::TG_API_ID secret is not set, the APK will not be able to sign in"; fi
+
+      - run: flutter pub get
+      - run: flutter build apk --release --dart-define-from-file=env.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stogram-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - run: cp build/app/outputs/flutter-apk/app-release.apk stogram.apk
+
+      - name: Publish to release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="dev-${GITHUB_SHA::7}"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --prerelease --title "Dev build $TAG" --notes "Автозбірка з main ($GITHUB_SHA)" ||
+            true
+          gh release upload "$TAG" stogram.apk --repo "$GITHUB_REPOSITORY" --clobber

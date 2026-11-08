@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../data/auth/auth_state.dart';
 import '../features/auth/auth_screen.dart';
+import '../features/chat/chat_screen.dart';
 import '../features/chat_list/chat_list_screen.dart';
 import 'providers.dart';
 
 abstract final class Routes {
   static const auth = '/auth';
   static const chats = '/chats';
+  static String chat(int id) => '/chats/$id';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -31,7 +33,17 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: Routes.auth, builder: (_, _) => const AuthScreen()),
-      GoRoute(path: Routes.chats, builder: (_, _) => const ChatListScreen()),
+      GoRoute(
+        path: Routes.chats,
+        builder: (_, _) => const ChatListScreen(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            builder: (_, state) =>
+                ChatScreen(chatId: int.parse(state.pathParameters['id']!)),
+          ),
+        ],
+      ),
     ],
   );
   ref.onDispose(() {

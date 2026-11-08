@@ -57,8 +57,22 @@ class TdNative {
   static DynamicLibrary _open(String? path) {
     if (path != null && path.isNotEmpty) return DynamicLibrary.open(path);
     if (Platform.isIOS) return DynamicLibrary.process();
-    if (Platform.isMacOS) return DynamicLibrary.open('libtdjson.dylib');
-    if (Platform.isWindows) return DynamicLibrary.open('tdjson.dll');
-    return DynamicLibrary.open('libtdjson.so');
+    final name = Platform.isWindows
+        ? 'tdjson.dll'
+        : Platform.isMacOS
+        ? 'libtdjson.dylib'
+        : 'libtdjson.so';
+    if (Platform.isLinux || Platform.isWindows) {
+      final bundled = bundledPath(Platform.resolvedExecutable, name);
+      if (File(bundled).existsSync()) return DynamicLibrary.open(bundled);
+    }
+    return DynamicLibrary.open(name);
+  }
+
+  /// Linux bundles keep libraries in `lib/`, Windows next to the exe.
+  static String bundledPath(String executable, String name) {
+    final dir = File(executable).parent.path;
+    final sep = Platform.pathSeparator;
+    return Platform.isLinux ? '$dir${sep}lib$sep$name' : '$dir$sep$name';
   }
 }

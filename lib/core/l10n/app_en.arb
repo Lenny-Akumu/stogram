@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "appTitle": "App",
+  "appTitle": "Stogram",
   "actionNext": "Next",
   "actionLogOut": "Log out",
   "authPhoneTitle": "Sign in",
@@ -30,5 +30,11 @@
   "previewContact": "Contact",
   "previewPoll": "Poll",
   "previewOther": "Message",
-  "chatUntitled": "Untitled"
+  "chatUntitled": "Untitled",
+  "composerHint": "Message",
+  "messageEdited": "edited",
+  "messageSendFailed": "Not sent",
+  "chatSendError": "Failed to send: {error}",
+  "chatHistoryEmpty": "Nothing here yet",
+  "actionSend": "Send"
 }

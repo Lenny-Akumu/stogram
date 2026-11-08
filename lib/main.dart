@@ -17,7 +17,7 @@ Future<void> main() async {
   }
   runApp(
     ProviderScope(
-      overrides: [tdClientProvider.overrideWithValue(td)],
+      overrides: [tdApiProvider.overrideWithValue(td)],
       child: const App(),
     ),
   );

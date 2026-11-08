@@ -20,6 +20,7 @@ ThemeData buildBaseTheme() {
       error: accent,
       onError: fg,
       outline: line,
+      surfaceContainerHighest: line,
     ),
     appBarTheme: const AppBarTheme(backgroundColor: bg, foregroundColor: fg),
     inputDecorationTheme: const InputDecorationTheme(

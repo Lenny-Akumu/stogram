@@ -20,7 +20,9 @@ class App extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // subscribe before TDLib starts pushing updateNewChat
-    ref.watch(chatsRepositoryProvider);
+    ref
+      ..watch(chatsRepositoryProvider)
+      ..watch(usersRepositoryProvider);
     return MaterialApp.router(
       onGenerateTitle: (context) => context.l10n.appTitle,
       theme: buildBaseTheme(),

@@ -13,6 +13,7 @@ class _Chat {
   int order = 0;
   bool isPinned = false;
   int unreadCount = 0;
+  bool isGroup = false;
   TdObject? lastMessage;
 }
 
@@ -65,6 +66,7 @@ class ChatsRepository {
         final id = c['id'] as int;
         final entry = _chats[id] = _Chat(id, c['title'] as String? ?? '')
           ..unreadCount = c['unread_count'] as int? ?? 0
+          ..isGroup = _isGroup(c['type'] as TdObject?)
           ..lastMessage = c['last_message'] as TdObject?;
         _applyPositions(entry, c['positions']);
       case 'updateChatTitle' when chat != null:
@@ -87,6 +89,19 @@ class ChatsRepository {
         return;
     }
     _scheduleEmit();
+  }
+
+  static bool _isGroup(TdObject? type) => switch (type?['@type']) {
+    'chatTypeBasicGroup' => true,
+    'chatTypeSupergroup' => type?['is_channel'] != true,
+    _ => false,
+  };
+
+  ChatSummary? byId(int id) {
+    for (final c in _current) {
+      if (c.id == id) return c;
+    }
+    return null;
   }
 
   void _applyPositions(_Chat chat, Object? positions) {
@@ -125,6 +140,7 @@ class ChatsRepository {
           order: c.order,
           isPinned: c.isPinned,
           unreadCount: c.unreadCount,
+          isGroup: c.isGroup,
           preview: switch (c.lastMessage?['content']) {
             final TdObject content => MessagePreview.fromContent(content),
             _ => null,
