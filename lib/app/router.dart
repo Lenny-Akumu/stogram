@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../data/auth/auth_state.dart';
 import '../features/auth/auth_screen.dart';
+import '../features/settings/appearance_screen.dart';
 import '../features/settings/ayu_settings_screen.dart';
+import '../features/settings/profile_screen.dart';
+import '../features/settings/settings_screen.dart';
 import '../ui/shell/classic_shell.dart';
 import 'providers.dart';
 
@@ -12,7 +15,10 @@ abstract final class Routes {
   static const auth = '/auth';
   static const chats = '/chats';
   static String chat(int id) => '/chats/$id';
+  static const settings = '/settings';
   static const ayu = '/settings/ayu';
+  static const profile = '/settings/profile';
+  static const appearance = '/settings/appearance';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -33,7 +39,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: Routes.ayu, builder: (_, _) => const AyuSettingsScreen()),
+      GoRoute(
+        path: Routes.settings,
+        builder: (_, _) => const SettingsScreen(),
+        routes: [
+          GoRoute(path: 'ayu', builder: (_, _) => const AyuSettingsScreen()),
+          GoRoute(path: 'profile', builder: (_, _) => const ProfileScreen()),
+          GoRoute(
+            path: 'appearance',
+            builder: (_, _) => const AppearanceScreen(),
+          ),
+        ],
+      ),
       GoRoute(path: Routes.auth, builder: (_, _) => const AuthScreen()),
       GoRoute(
         path: Routes.chats,

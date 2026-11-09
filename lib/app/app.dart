@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/l10n/l10n.dart';
 import '../ui/components/update_banner.dart';
-import '../features/chat_list/app_drawer.dart';
 import 'providers.dart';
 import 'router.dart';
-import '../ui/theme/chat_colors.dart';
+import '../ui/theme/skin_provider.dart';
+import '../ui/theme/skins.dart';
 
 const appLocalizationDelegates = [
   AppLocalizations.delegate,
@@ -30,9 +30,7 @@ class App extends ConsumerWidget {
       ..watch(ghostSyncProvider);
     return MaterialApp.router(
       onGenerateTitle: (context) => context.l10n.appTitle,
-      theme: buildClassicTheme(dark: false),
-      darkTheme: buildClassicTheme(dark: true),
-      themeMode: ref.watch(themeModeProvider),
+      theme: buildSkinTheme(ref.watch(skinProvider)),
       localizationsDelegates: appLocalizationDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('uk'),
@@ -51,7 +49,7 @@ class FatalApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: buildClassicTheme(dark: true),
+      theme: buildSkinTheme(skins.first),
       localizationsDelegates: appLocalizationDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('uk'),

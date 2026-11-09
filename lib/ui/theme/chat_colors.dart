@@ -82,38 +82,3 @@ class ChatColors extends ThemeExtension<ChatColors> {
   ChatColors lerp(ChatColors? other, double t) =>
       t < 0.5 ? this : other ?? this;
 }
-
-ThemeData buildClassicTheme({required bool dark}) {
-  final c = dark ? ChatColors.night : ChatColors.day;
-  final scheme =
-      ColorScheme.fromSeed(
-        seedColor: c.accent,
-        brightness: dark ? Brightness.dark : Brightness.light,
-      ).copyWith(
-        primary: c.accent,
-        onPrimary: Colors.white,
-        surface: c.panel,
-        onSurface: c.textIn,
-        onSurfaceVariant: c.secondary,
-        surfaceContainerHighest: c.bubbleIn,
-        outline: c.divider,
-        error: c.deleted,
-      );
-  return ThemeData(
-    colorScheme: scheme,
-    scaffoldBackgroundColor: c.panel,
-    dividerColor: c.divider,
-    appBarTheme: AppBarTheme(
-      backgroundColor: c.panel,
-      foregroundColor: c.textIn,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-    ),
-    drawerTheme: DrawerThemeData(backgroundColor: c.panel),
-    listTileTheme: ListTileThemeData(
-      selectedTileColor: c.selected,
-      selectedColor: Colors.white,
-    ),
-    extensions: [c],
-  );
-}
