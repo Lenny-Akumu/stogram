@@ -64,7 +64,11 @@ jobs:
             '{TG_API_ID: $id, TG_API_HASH: $hash, TDJSON_PATH: ""}' > env.json
 
       - run: flutter pub get
-      - run: flutter build linux --release --dart-define-from-file=env.json
+      - name: Build Linux bundle
+        run: |
+          TAG=""
+          if [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF" = refs/heads/main ]; then TAG="dev-${GITHUB_SHA::7}"; fi
+          flutter build linux --release --dart-define-from-file=env.json --dart-define=BUILD_TAG="$TAG"
 
       - name: Package
         run: |
@@ -134,7 +138,12 @@ jobs:
             ConvertTo-Json | Set-Content -Encoding utf8NoBOM env.json
 
       - run: flutter pub get
-      - run: flutter build windows --release --dart-define-from-file=env.json
+      - name: Build Windows bundle
+        shell: bash
+        run: |
+          TAG=""
+          if [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF" = refs/heads/main ]; then TAG="dev-${GITHUB_SHA::7}"; fi
+          flutter build windows --release --dart-define-from-file=env.json --dart-define=BUILD_TAG="$TAG"
 
       - name: Package
         shell: pwsh

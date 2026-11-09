@@ -19,6 +19,7 @@ dependencies:
   intl: any
   path_provider: ^2.1.5
   qr_flutter: ^4.1.0
+  archive: ^4.6.0
 
 dev_dependencies:
   flutter_test:

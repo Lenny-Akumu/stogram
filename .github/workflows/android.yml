@@ -91,8 +91,30 @@ jobs:
             '{TG_API_ID: $id, TG_API_HASH: $hash, TDJSON_PATH: ""}' > env.json
           if [ -z "$TG_API_ID" ]; then echo "::warning::TG_API_ID secret is not set, the APK will not be able to sign in"; fi
 
+      - name: Prepare signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::ANDROID_KEYSTORE_BASE64 is not set, signing with a throwaway debug key (in-app updates will not install over it)"
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/release.jks
+          {
+            echo "storeFile=release.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=stogram"
+            echo "keyPassword=$KEYSTORE_PASSWORD"
+          } > android/key.properties
+
       - run: flutter pub get
-      - run: flutter build apk --release --dart-define-from-file=env.json
+      - name: Build APK
+        run: |
+          TAG=""
+          if [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF" = refs/heads/main ]; then TAG="dev-${GITHUB_SHA::7}"; fi
+          flutter build apk --release --build-number="$GITHUB_RUN_NUMBER" \
+            --dart-define-from-file=env.json --dart-define=BUILD_TAG="$TAG"
 
       - uses: actions/upload-artifact@v4
         with:
