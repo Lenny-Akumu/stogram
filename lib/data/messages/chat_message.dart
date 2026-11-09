@@ -16,6 +16,7 @@ class ChatMessage {
     required this.sendState,
     this.replyToId,
     this.media,
+    this.deletedAt,
   });
 
   factory ChatMessage.fromJson(TdObject json) {
@@ -56,12 +57,18 @@ class ChatMessage {
   final int? replyToId;
   final MessageMedia? media;
 
+  /// Set when the message was deleted but kept by the archive.
+  final DateTime? deletedAt;
+
+  bool get isDeleted => deletedAt != null;
+
   bool get isEdited => editDate != null;
 
   ChatMessage copyWith({
     MessagePreview? content,
     MessageMedia? media,
     DateTime? editDate,
+    DateTime? deletedAt,
     SendState? sendState,
   }) => ChatMessage(
     id: id,
@@ -74,6 +81,7 @@ class ChatMessage {
     sendState: sendState ?? this.sendState,
     replyToId: replyToId,
     media: content == null ? this.media : media,
+    deletedAt: deletedAt ?? this.deletedAt,
   );
 
   static DateTime _time(Object? seconds) =>

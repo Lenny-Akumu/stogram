@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import '../../core/ayu/ayu_archive.dart';
+import '../../core/ayu/ayu_settings.dart';
 import '../../core/tdlib/td_api.dart';
 import '../../core/tdlib/td_dispatcher.dart';
 import '../../core/tdlib/td_error.dart';
@@ -8,12 +10,21 @@ import 'chat_message.dart';
 import 'message_media.dart';
 
 class MessagesRepository {
-  MessagesRepository(this._td, this.chatId) {
+  MessagesRepository(
+    this._td,
+    this.chatId, {
+    AyuArchive? archive,
+    AyuSettings Function()? settings,
+  }) : _archive = archive,
+       _settings = settings ?? (() => const AyuSettings()) {
     _sub = _td.updates.listen(_onUpdate);
   }
 
   final TdApi _td;
   final int chatId;
+  final AyuArchive? _archive;
+  final AyuSettings Function() _settings;
+  DateTime _lastTyping = DateTime.fromMillisecondsSinceEpoch(0);
   final _byId = <int, ChatMessage>{};
   final _replies = <int, ChatMessage>{};
   final _requestedReplies = <int>{};
@@ -89,15 +100,56 @@ class MessagesRepository {
           _reachedStart = true;
           break;
         }
-        for (final m in list) {
-          final msg = ChatMessage.fromJson(m as TdObject);
+        final raw = [for (final m in list) m as TdObject];
+        for (final m in raw) {
+          final msg = ChatMessage.fromJson(m);
           _byId[msg.id] = msg;
         }
+        unawaited(_archive?.storeAll(raw));
         fetched += list.length;
         _emit();
       }
+      await _mergeDeleted();
     } finally {
       _loading = false;
+    }
+  }
+
+  Future<void> _mergeDeleted() async {
+    final archive = _archive;
+    if (archive == null || !_settings().saveDeleted) return;
+    final from = _reachedStart || _byId.isEmpty
+        ? 0
+        : _byId.keys.reduce((a, b) => a < b ? a : b);
+    var added = false;
+    for (final (json, at) in await archive.deletedSince(chatId, from)) {
+      final msg = ChatMessage.fromJson(json).copyWith(deletedAt: at);
+      final existing = _byId[msg.id];
+      if (existing != null && existing.isDeleted) continue;
+      if (existing != null) continue;
+      _byId[msg.id] = msg;
+      added = true;
+    }
+    if (added) _emit();
+  }
+
+  Future<List<EditRecord>> edits(int messageId) async =>
+      await _archive?.edits(chatId, messageId) ?? const [];
+
+  /// Tells the other side we are typing, unless ghost mode hides it.
+  Future<void> sendTyping() async {
+    if (_settings().ghostMode) return;
+    final now = DateTime.now();
+    if (now.difference(_lastTyping) < const Duration(seconds: 4)) return;
+    _lastTyping = now;
+    try {
+      await _td.send({
+        '@type': 'sendChatAction',
+        'chat_id': chatId,
+        'action': {'@type': 'chatActionTyping'},
+      });
+    } on TdError {
+      // typing is best effort
     }
   }
 
@@ -116,6 +168,10 @@ class MessagesRepository {
       'input_message_content': _textContent(text),
     });
     _put(ChatMessage.fromJson(res));
+    final ayu = _settings();
+    if (ayu.ghostMode && !ayu.readSilentlyOnReply) {
+      await markRead(force: true);
+    }
   }
 
   Future<void> editText(int messageId, String text) async {
@@ -149,8 +205,11 @@ class MessagesRepository {
     }
   }
 
-  Future<void> markRead() async {
-    final incoming = _current.where((m) => !m.isOutgoing).take(100);
+  Future<void> markRead({bool force = false}) async {
+    if (!force && _settings().ghostMode) return;
+    final incoming = _current
+        .where((m) => !m.isOutgoing && !m.isDeleted)
+        .take(100);
     if (incoming.isEmpty) return;
     await _td.send({
       '@type': 'viewMessages',
@@ -195,8 +254,16 @@ class MessagesRepository {
         _emit();
       case 'updateDeleteMessages':
         if (u['is_permanent'] != true) return;
+        final keep = _settings().saveDeleted && u['from_cache'] != true;
+        final now = DateTime.now();
         for (final id in (u['message_ids'] as List? ?? const [])) {
-          _byId.remove(id);
+          final m = _byId[id];
+          if (m == null) continue;
+          if (keep) {
+            _byId[id as int] = m.copyWith(deletedAt: now);
+          } else {
+            _byId.remove(id);
+          }
         }
         _emit();
     }

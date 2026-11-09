@@ -25,7 +25,9 @@ class App extends ConsumerWidget {
     ref
       ..watch(chatsRepositoryProvider)
       ..watch(usersRepositoryProvider)
-      ..watch(filesRepositoryProvider);
+      ..watch(filesRepositoryProvider)
+      ..watch(ayuArchiveProvider)
+      ..watch(ghostSyncProvider);
     return MaterialApp.router(
       onGenerateTitle: (context) => context.l10n.appTitle,
       theme: buildClassicTheme(dark: false),

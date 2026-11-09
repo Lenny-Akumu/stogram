@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/util/streams.dart';
+import '../core/ayu/ayu_archive.dart';
+import '../core/ayu/ayu_settings.dart';
 import '../core/config.dart';
+import '../core/db/app_db.dart';
 import '../core/tdlib/td_api.dart';
 import '../data/auth/auth_repository.dart';
 import '../data/auth/auth_state.dart';
@@ -50,7 +53,12 @@ final usersRepositoryProvider = Provider<UsersRepository>((ref) {
 
 final messagesRepositoryProvider = Provider.autoDispose
     .family<MessagesRepository, int>((ref, chatId) {
-      final repo = MessagesRepository(ref.watch(tdApiProvider), chatId);
+      final repo = MessagesRepository(
+        ref.watch(tdApiProvider),
+        chatId,
+        archive: ref.watch(ayuArchiveProvider),
+        settings: () => ref.read(ayuSettingsProvider),
+      );
       ref.onDispose(repo.dispose);
       return repo;
     });
@@ -86,3 +94,39 @@ class SelectedChat extends Notifier<int?> {
 
   void select(int? id) => state = id;
 }
+
+/// Null in tests; main overrides it with the on-disk database.
+final appDbProvider = Provider<AppDb?>((_) => null);
+
+final ayuArchiveProvider = Provider<AyuArchive?>((ref) {
+  final db = ref.watch(appDbProvider);
+  if (db == null) return null;
+  final archive = AyuArchive(
+    ref.watch(tdApiProvider),
+    db,
+    () => ref.read(ayuSettingsProvider),
+  );
+  ref.onDispose(archive.dispose);
+  return archive;
+});
+
+/// Keeps TDLib's online flag in line with ghost mode.
+final ghostSyncProvider = Provider<void>((ref) {
+  final td = ref.watch(tdApiProvider);
+  void apply() {
+    final ghost = ref.read(ayuSettingsProvider).ghostMode;
+    td.send({
+      '@type': 'setOption',
+      'name': 'online',
+      'value': {'@type': 'optionValueBoolean', 'value': !ghost},
+    }).ignore();
+  }
+
+  ref
+    ..listen(ayuSettingsProvider, (prev, next) {
+      if (prev?.ghostMode != next.ghostMode) apply();
+    })
+    ..listen(authStateProvider, (_, next) {
+      if (next.value is AuthReady) apply();
+    }, fireImmediately: true);
+});

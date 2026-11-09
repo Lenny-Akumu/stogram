@@ -1,3 +1,4 @@
+import 'package:app/core/ayu/ayu_settings.dart';
 import 'package:app/data/chats/chat_summary.dart';
 import 'package:app/data/messages/chat_message.dart';
 import 'package:app/data/messages/messages_repository.dart';
@@ -101,7 +102,7 @@ void main() {
     expect((req['input_message_content'] as Map)['@type'], 'inputMessageText');
   });
 
-  test('permanent delete removes, cache eviction does not', () async {
+  test('permanent delete is kept and marked when saving deleted', () async {
     td
       ..push({'@type': 'updateNewMessage', 'message': _msg(1)})
       ..push({'@type': 'updateNewMessage', 'message': _msg(2)})
@@ -112,7 +113,7 @@ void main() {
         'is_permanent': false,
         'from_cache': true,
       });
-    expect(repo.current, hasLength(2));
+    expect(repo.current.every((m) => !m.isDeleted), isTrue);
     td.push({
       '@type': 'updateDeleteMessages',
       'chat_id': 7,
@@ -120,7 +121,44 @@ void main() {
       'is_permanent': true,
       'from_cache': false,
     });
-    expect(repo.current.single.id, 2);
+    expect(repo.current, hasLength(2));
+    expect(repo.current.last.isDeleted, isTrue);
+  });
+
+  test('permanent delete removes when saving deleted is off', () async {
+    final plain = MessagesRepository(
+      td,
+      7,
+      settings: () => const AyuSettings(saveDeleted: false),
+    );
+    addTearDown(plain.dispose);
+    td
+      ..push({'@type': 'updateNewMessage', 'message': _msg(1)})
+      ..push({'@type': 'updateNewMessage', 'message': _msg(2)})
+      ..push({
+        '@type': 'updateDeleteMessages',
+        'chat_id': 7,
+        'message_ids': [1],
+        'is_permanent': true,
+        'from_cache': false,
+      });
+    expect(plain.current.single.id, 2);
+  });
+
+  test('ghost mode skips viewMessages and typing', () async {
+    final ghost = MessagesRepository(
+      td,
+      7,
+      settings: () => const AyuSettings(ghostMode: true),
+    );
+    addTearDown(ghost.dispose);
+    td.push({'@type': 'updateNewMessage', 'message': _msg(1)});
+    await ghost.markRead();
+    await ghost.sendTyping();
+    expect(td.sent, isEmpty);
+
+    await repo.sendTyping();
+    expect(td.sent.single['@type'], 'sendChatAction');
   });
 
   test('markRead sends incoming ids only', () async {
