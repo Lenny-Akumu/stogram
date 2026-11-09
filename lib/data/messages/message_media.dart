@@ -73,14 +73,18 @@ class VideoMedia extends MessageMedia {
     required this.duration,
     this.isGif = false,
     this.isRound = false,
+    this.fileId,
+    this.file,
   });
   final MediaImage cover;
   final int duration;
   final bool isGif;
   final bool isRound;
+  final int? fileId;
+  final TdObject? file;
 
   @override
-  List<TdObject> get files => [?cover.file];
+  List<TdObject> get files => [?cover.file, ?file];
 }
 
 class DocumentMedia extends MessageMedia {
@@ -100,11 +104,60 @@ class DocumentMedia extends MessageMedia {
 }
 
 class VoiceMedia extends MessageMedia {
-  const VoiceMedia({required this.duration});
+  const VoiceMedia({
+    required this.duration,
+    this.fileId,
+    this.file,
+    this.waveform = const [],
+  });
   final int duration;
+  final int? fileId;
+  final TdObject? file;
+
+  /// 0..31 per sample, as Telegram packs it.
+  final List<int> waveform;
 
   @override
-  List<TdObject> get files => const [];
+  List<TdObject> get files => [?file];
+}
+
+class AudioMedia extends MessageMedia {
+  const AudioMedia({
+    required this.fileId,
+    required this.title,
+    required this.duration,
+    this.file,
+  });
+  final int fileId;
+  final String title;
+  final int duration;
+  final TdObject? file;
+
+  @override
+  List<TdObject> get files => [?file];
+}
+
+/// Unpacks Telegram's 5-bit waveform into values 0..31.
+List<int> decodeWaveform(Object? data) {
+  if (data is! String || data.isEmpty) return const [];
+  final Uint8List bytes;
+  try {
+    bytes = base64Decode(data);
+  } on FormatException {
+    return const [];
+  }
+  final count = bytes.length * 8 ~/ 5;
+  return [
+    for (var i = 0; i < count; i++)
+      () {
+        final bit = i * 5;
+        final byte = bit >> 3;
+        final shift = bit & 7;
+        final lo = bytes[byte];
+        final hi = byte + 1 < bytes.length ? bytes[byte + 1] : 0;
+        return ((lo | (hi << 8)) >> shift) & 31;
+      }(),
+  ];
 }
 
 Uint8List? decodeMini(TdObject? mini) {
@@ -163,6 +216,7 @@ VideoMedia? _video(TdObject? v, {required bool gif, bool round = false}) {
   if (v == null) return null;
   final thumb = v['thumbnail'] as TdObject?;
   final length = v['length'] as int?;
+  final file = (v['video'] ?? v['animation']) as TdObject?;
   return VideoMedia(
     _image(
       thumb?['file'] as TdObject?,
@@ -173,6 +227,8 @@ VideoMedia? _video(TdObject? v, {required bool gif, bool round = false}) {
     duration: v['duration'] as int? ?? 0,
     isGif: gif,
     isRound: round,
+    fileId: file?['id'] as int?,
+    file: file,
   );
 }
 
@@ -187,20 +243,28 @@ DocumentMedia? _document(TdObject? d) {
   );
 }
 
-DocumentMedia? _audio(TdObject? a) {
+AudioMedia? _audio(TdObject? a) {
   final file = a?['audio'] as TdObject?;
   if (file == null) return null;
   final title = [
     a?['performer'] as String? ?? '',
     a?['title'] as String? ?? '',
   ].where((s) => s.isNotEmpty).join(' — ');
-  return DocumentMedia(
+  return AudioMedia(
     fileId: file['id'] as int,
-    name: title.isEmpty ? (a?['file_name'] as String? ?? '') : title,
-    size: file['size'] as int? ?? 0,
+    title: title.isEmpty ? (a?['file_name'] as String? ?? '') : title,
+    duration: a?['duration'] as int? ?? 0,
     file: file,
   );
 }
 
-VoiceMedia? _voice(TdObject? v) =>
-    v == null ? null : VoiceMedia(duration: v['duration'] as int? ?? 0);
+VoiceMedia? _voice(TdObject? v) {
+  if (v == null) return null;
+  final file = v['voice'] as TdObject?;
+  return VoiceMedia(
+    duration: v['duration'] as int? ?? 0,
+    fileId: file?['id'] as int?,
+    file: file,
+    waveform: decodeWaveform(v['waveform']),
+  );
+}

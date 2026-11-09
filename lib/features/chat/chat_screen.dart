@@ -590,7 +590,11 @@ class _Bubble extends ConsumerWidget {
               style: TextStyle(color: fg),
               child: IconTheme.merge(
                 data: IconThemeData(color: fg),
-                child: MediaView(media: media, maxWidth: maxWidth - 16),
+                child: MediaView(
+                  media: media,
+                  maxWidth: maxWidth - 16,
+                  outgoing: out,
+                ),
               ),
             ),
           ),

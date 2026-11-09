@@ -78,6 +78,18 @@ class FilesRepository {
     }
   }
 
+  /// Downloads (if needed) and completes once the file is on disk.
+  Future<TdFile> fetch(int id, {TdObject? seed}) async {
+    this.seed(seed);
+    final known = _files[id];
+    if (known != null && known.ready) return known;
+    final done = watch(id).firstWhere((f) => f.ready);
+    await download(id, priority: 32);
+    final now = _files[id];
+    if (now != null && now.ready) return now;
+    return done;
+  }
+
   void _put(TdFile f) {
     _files[f.id] = f;
     if (!_out.isClosed) _out.add(f);

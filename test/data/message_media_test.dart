@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:app/data/messages/message_media.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -67,8 +69,8 @@ void main() {
                 'audio': _file(6),
               },
             })!
-            as DocumentMedia;
-    expect(audio.name, 'Okean Elzy — Obijmy');
+            as AudioMedia;
+    expect(audio.title, 'Okean Elzy — Obijmy');
   });
 
   test('round video note is square', () {
@@ -85,5 +87,42 @@ void main() {
 
   test('text has no media', () {
     expect(MessageMedia.fromContent({'@type': 'messageText'}), isNull);
+  });
+
+  test('waveform unpacks 5-bit samples', () {
+    // bits: 11111 00000 10101 -> 31, 0, 21 (little endian bit order)
+    final bytes = [0x1F, 0x54, 0x00];
+    final w = decodeWaveform(base64Encode(bytes));
+    expect(w.take(3), [31, 0, 21]);
+  });
+
+  test('voice keeps file and waveform', () {
+    final v =
+        MessageMedia.fromContent({
+              '@type': 'messageVoiceNote',
+              'voice_note': {
+                'duration': 12,
+                'waveform': base64Encode([0x1F]),
+                'voice': _file(40),
+              },
+            })!
+            as VoiceMedia;
+    expect(v.fileId, 40);
+    expect(v.waveform, isNotEmpty);
+  });
+
+  test('video keeps playable file', () {
+    final v =
+        MessageMedia.fromContent({
+              '@type': 'messageVideo',
+              'video': {
+                'duration': 3,
+                'width': 10,
+                'height': 10,
+                'video': _file(41),
+              },
+            })!
+            as VideoMedia;
+    expect(v.fileId, 41);
   });
 }

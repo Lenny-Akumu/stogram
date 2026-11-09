@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:media_kit/media_kit.dart';
 
 import 'app/app.dart';
 import 'app/providers.dart';
@@ -8,6 +9,7 @@ import 'core/tdlib/td_client.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
   final TdClient td;
   try {
     td = await TdClient.start(libPath: Env.tdjsonPath);

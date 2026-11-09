@@ -41,4 +41,16 @@ void main() {
     files.seed(_file(4));
     expect(files.get(4)?.ready, isTrue);
   });
+
+  test('fetch completes when the download finishes', () async {
+    final td = FakeTd()..handler = (_) => _file(9, got: 1);
+    final files = FilesRepository(td);
+    final future = files.fetch(9);
+    await pumpEventQueue();
+    td.push({'@type': 'updateFile', 'file': _file(9, done: true, got: 1000)});
+    final f = await future;
+    expect(f.ready, isTrue);
+    expect(f.path, '/tmp/f9');
+    await files.dispose();
+  });
 }

@@ -28,7 +28,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gperf zlib1g-dev libssl-dev clang cmake ninja-build \
-            pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+            pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev libmpv-dev
 
       - id: cache
         uses: actions/cache@v4
