@@ -16,6 +16,7 @@ class _Chat {
   int unreadCount = 0;
   bool isGroup = false;
   MediaImage? photo;
+  ChatPeer peer = const ChatPeer();
   TdObject? lastMessage;
 }
 
@@ -70,6 +71,7 @@ class ChatsRepository {
           ..unreadCount = c['unread_count'] as int? ?? 0
           ..isGroup = _isGroup(c['type'] as TdObject?)
           ..photo = chatPhoto(c['photo'] as TdObject?)
+          ..peer = ChatPeer.fromType(c['type'] as TdObject?)
           ..lastMessage = c['last_message'] as TdObject?;
         _applyPositions(entry, c['positions']);
       case 'updateChatPhoto' when chat != null:
@@ -147,6 +149,7 @@ class ChatsRepository {
           unreadCount: c.unreadCount,
           isGroup: c.isGroup,
           photo: c.photo,
+          peer: c.peer,
           preview: switch (c.lastMessage?['content']) {
             final TdObject content => MessagePreview.fromContent(content),
             _ => null,

@@ -67,6 +67,7 @@ class ChatSummary {
     required this.date,
     this.isGroup = false,
     this.photo,
+    this.peer = const ChatPeer(),
   });
 
   final int id;
@@ -78,6 +79,34 @@ class ChatSummary {
   final DateTime? date;
   final bool isGroup;
   final MediaImage? photo;
+  final ChatPeer peer;
+}
+
+class ChatPeer {
+  const ChatPeer({
+    this.userId,
+    this.basicGroupId,
+    this.supergroupId,
+    this.isChannel = false,
+  });
+
+  factory ChatPeer.fromType(TdObject? type) => switch (type?['@type']) {
+    'chatTypePrivate' ||
+    'chatTypeSecret' => ChatPeer(userId: type?['user_id'] as int?),
+    'chatTypeBasicGroup' => ChatPeer(
+      basicGroupId: type?['basic_group_id'] as int?,
+    ),
+    'chatTypeSupergroup' => ChatPeer(
+      supergroupId: type?['supergroup_id'] as int?,
+      isChannel: type?['is_channel'] == true,
+    ),
+    _ => const ChatPeer(),
+  };
+
+  final int? userId;
+  final int? basicGroupId;
+  final int? supergroupId;
+  final bool isChannel;
 }
 
 MediaImage? chatPhoto(TdObject? info) {

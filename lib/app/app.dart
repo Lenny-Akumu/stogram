@@ -4,9 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/l10n/l10n.dart';
 import '../ui/components/update_banner.dart';
+import '../features/chat_list/app_drawer.dart';
 import 'providers.dart';
 import 'router.dart';
-import 'theme.dart';
+import '../ui/theme/chat_colors.dart';
 
 const appLocalizationDelegates = [
   AppLocalizations.delegate,
@@ -23,10 +24,13 @@ class App extends ConsumerWidget {
     // subscribe before TDLib starts pushing updateNewChat
     ref
       ..watch(chatsRepositoryProvider)
-      ..watch(usersRepositoryProvider);
+      ..watch(usersRepositoryProvider)
+      ..watch(filesRepositoryProvider);
     return MaterialApp.router(
       onGenerateTitle: (context) => context.l10n.appTitle,
-      theme: buildBaseTheme(),
+      theme: buildClassicTheme(dark: false),
+      darkTheme: buildClassicTheme(dark: true),
+      themeMode: ref.watch(themeModeProvider),
       localizationsDelegates: appLocalizationDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('uk'),
@@ -45,7 +49,7 @@ class FatalApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: buildBaseTheme(),
+      theme: buildClassicTheme(dark: true),
       localizationsDelegates: appLocalizationDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('uk'),

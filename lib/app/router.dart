@@ -4,8 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../data/auth/auth_state.dart';
 import '../features/auth/auth_screen.dart';
-import '../features/chat/chat_screen.dart';
-import '../features/chat_list/chat_list_screen.dart';
+import '../ui/shell/classic_shell.dart';
 import 'providers.dart';
 
 abstract final class Routes {
@@ -35,12 +34,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.auth, builder: (_, _) => const AuthScreen()),
       GoRoute(
         path: Routes.chats,
-        builder: (_, _) => const ChatListScreen(),
+        builder: (_, _) => const ClassicShell(),
         routes: [
           GoRoute(
             path: ':id',
             builder: (_, state) =>
-                ChatScreen(chatId: int.parse(state.pathParameters['id']!)),
+                ClassicShell(chatId: int.parse(state.pathParameters['id']!)),
           ),
         ],
       ),

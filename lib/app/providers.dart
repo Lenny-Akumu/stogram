@@ -12,6 +12,8 @@ import '../data/messages/chat_message.dart';
 import '../data/messages/messages_repository.dart';
 import '../data/users/users_repository.dart';
 
+export '../data/users/users_repository.dart';
+
 final envConfiguredProvider = Provider<bool>((_) => Env.isConfigured);
 
 final tdApiProvider = Provider<TdApi>(
@@ -64,3 +66,23 @@ final filesRepositoryProvider = Provider<FilesRepository>((ref) {
   ref.onDispose(repo.dispose);
   return repo;
 });
+
+/// Ticks whenever any user, group or typing state changes.
+final usersChangedProvider = StreamProvider<void>((ref) {
+  return ref.watch(usersRepositoryProvider).changes;
+});
+
+final meProvider = FutureProvider<TgUser?>((ref) {
+  return ref.watch(usersRepositoryProvider).loadMe();
+});
+
+final selectedChatProvider = NotifierProvider<SelectedChat, int?>(
+  SelectedChat.new,
+);
+
+class SelectedChat extends Notifier<int?> {
+  @override
+  int? build() => null;
+
+  void select(int? id) => state = id;
+}

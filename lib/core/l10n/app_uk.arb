@@ -233,5 +233,85 @@
         "type": "int"
       }
     }
+  },
+  "statusOnline": "у мережі",
+  "statusLastSeenAt": "був(ла) о {time}",
+  "statusLastSeenYesterday": "був(ла) вчора о {time}",
+  "statusLastSeenDate": "був(ла) {date}",
+  "statusRecently": "був(ла) нещодавно",
+  "statusWeek": "був(ла) цього тижня",
+  "statusMonth": "був(ла) цього місяця",
+  "statusLongAgo": "був(ла) давно",
+  "statusBot": "бот",
+  "membersCount": "{n, plural, one{{n} учасник} few{{n} учасники} many{{n} учасників} other{{n} учасника}}",
+  "subscribersCount": "{n, plural, one{{n} підписник} few{{n} підписники} many{{n} підписників} other{{n} підписника}}",
+  "typing": "друкує…",
+  "typingVoice": "записує голосове…",
+  "typingVideo": "записує відео…",
+  "typingUpload": "надсилає файл…",
+  "typingSticker": "обирає стікер…",
+  "typingOther": "щось робить…",
+  "typingNamed": "{name} {action}",
+  "typingMany": "{n} людей друкують…",
+  "today": "Сьогодні",
+  "yesterday": "Вчора",
+  "selectChat": "Оберіть чат, щоб почати спілкування",
+  "searchHint": "Пошук",
+  "menuProfile": "Мій профіль",
+  "menuSettings": "Налаштування",
+  "menuNightMode": "Нічний режим",
+  "scrollDown": "Вниз",
+  "savedMessages": "Збережене",
+  "@statusLastSeenAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "@statusLastSeenYesterday": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "@statusLastSeenDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@membersCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "@subscribersCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "@typingNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "@typingMany": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
   }
 }
