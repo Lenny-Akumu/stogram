@@ -83,7 +83,7 @@ void main() {
     expect(td.sent.map((r) => r['@type']), contains('viewMessages'));
 
     await tester.enterText(find.byType(TextField), 'як ти');
-    await tester.tap(find.byIcon(Icons.arrow_upward));
+    await tester.tap(find.byIcon(Icons.send));
     await tester.pumpAndSettle();
 
     expect(find.text('як ти'), findsOneWidget);
@@ -114,7 +114,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'ага');
-    await tester.tap(find.byIcon(Icons.arrow_upward));
+    await tester.tap(find.byIcon(Icons.send));
     await tester.pumpAndSettle();
 
     final req = td.sent.lastWhere((r) => r['@type'] == 'sendMessage');
@@ -146,7 +146,7 @@ void main() {
     );
 
     await tester.enterText(find.byType(TextField), 'опечатка');
-    await tester.tap(find.byIcon(Icons.check));
+    await tester.tap(find.byIcon(Icons.check_circle));
     await tester.pumpAndSettle();
 
     expect(td.sent.last['@type'], 'editMessageText');

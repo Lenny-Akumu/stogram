@@ -9,6 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../fakes/fake_td.dart';
 
+void _noop(int _) {}
+
 void main() {
   testWidgets('renders chats with preview and unread badge', (tester) async {
     final td = FakeTd();
@@ -17,12 +19,15 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [chatsRepositoryProvider.overrideWithValue(repo)],
+        overrides: [
+          tdApiProvider.overrideWithValue(td),
+          chatsRepositoryProvider.overrideWithValue(repo),
+        ],
         child: const MaterialApp(
           locale: Locale('uk'),
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: appLocalizationDelegates,
-          home: ChatListScreen(),
+          home: ChatListPane(onOpen: _noop),
         ),
       ),
     );
@@ -51,7 +56,7 @@ void main() {
     expect(find.text('Софія'), findsOneWidget);
     expect(find.text('Голосове'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
-    expect(find.byIcon(Icons.push_pin), findsOneWidget);
+    expect(find.byIcon(Icons.push_pin), findsNothing);
     expect(td.sent.single['@type'], 'loadChats');
   });
 }
