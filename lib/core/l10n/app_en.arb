@@ -121,5 +121,20 @@
   "menuSettings": "Settings",
   "menuNightMode": "Night mode",
   "scrollDown": "Down",
-  "savedMessages": "Saved Messages"
+  "savedMessages": "Saved Messages",
+  "menuAyu": "Ayu features",
+  "ayuTitle": "Ayu features",
+  "ayuGhost": "Ghost mode",
+  "ayuGhostDesc": "Hide online status, don't mark messages as read and don't show typing",
+  "ayuSaveDeleted": "Keep deleted messages",
+  "ayuSaveDeletedDesc": "Messages deleted by others stay in the chat with a mark",
+  "ayuEditHistory": "Edit history",
+  "ayuEditHistoryDesc": "Keep earlier versions of edited text; tap \"edited\" to see them",
+  "ayuReadSilently": "Read silently when replying",
+  "ayuReadSilentlyDesc": "In ghost mode your reply doesn't mark the chat as read",
+  "ayuTosWarning": "These features break Telegram's rules. Better test them on a second account.",
+  "messageDeleted": "deleted",
+  "editHistoryTitle": "Edit history",
+  "editHistoryEmpty": "No earlier versions saved",
+  "editHistoryCurrent": "Now"
 }

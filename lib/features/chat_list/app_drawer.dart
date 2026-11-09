@@ -2,8 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
+import '../../app/router.dart';
+import '../../core/ayu/ayu_settings.dart';
 import '../../core/l10n/l10n.dart';
 import '../../core/util/phone.dart';
 import '../../ui/components/avatar.dart';
@@ -68,6 +71,17 @@ class AppDrawer extends ConsumerWidget {
                   ),
               ],
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.auto_awesome_outlined),
+            title: Text(l10n.menuAyu),
+            trailing: ref.watch(ayuSettingsProvider).ghostMode
+                ? Icon(Icons.visibility_off, color: colors.accent, size: 20)
+                : null,
+            onTap: () {
+              Navigator.pop(context);
+              unawaited(context.push(Routes.ayu));
+            },
           ),
           ListTile(
             leading: const Icon(Icons.dark_mode_outlined),

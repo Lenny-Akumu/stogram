@@ -197,6 +197,53 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  Future<void> _showEdits(ChatMessage m) async {
+    final l10n = context.l10n;
+    final colors = ChatColors.of(context);
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final edits = await _repo.edits(m.id);
+    if (!mounted) return;
+    final fmt = DateFormat('dd.MM HH:mm', locale);
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                l10n.editHistoryTitle,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (edits.isEmpty) ListTile(title: Text(l10n.editHistoryEmpty)),
+            for (final e in edits)
+              ListTile(
+                title: Text(e.text),
+                subtitle: Text(
+                  fmt.format(e.at),
+                  style: TextStyle(color: colors.secondary),
+                ),
+              ),
+            ListTile(
+              title: Text(m.content.text),
+              subtitle: Text(
+                '${l10n.editHistoryCurrent} · '
+                '${fmt.format(m.editDate ?? m.date)}',
+                style: TextStyle(color: colors.accent),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _confirmDelete(ChatMessage m, MessageActions actions) async {
     final l10n = context.l10n;
     var revoke = actions.canDeleteForAll;
@@ -302,6 +349,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         replied: _repo.repliedTo(m),
                         isRead: _repo.isRead(m),
                         onActions: () => _showActions(m),
+                        onEdits: () => _showEdits(m),
                       );
                       if (!newDay) return bubble;
                       return Column(
@@ -348,6 +396,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             controller: _input,
             focusNode: _inputFocus,
             onSend: _submit,
+            onTyping: () => unawaited(_repo.sendTyping()),
             editing: _mode == _Mode.edit,
           ),
         ],
@@ -449,6 +498,7 @@ class _Bubble extends ConsumerWidget {
     required this.showAvatar,
     required this.tail,
     required this.onActions,
+    required this.onEdits,
     this.replied,
     this.isRead = false,
   });
@@ -457,6 +507,7 @@ class _Bubble extends ConsumerWidget {
   final bool showSender;
   final bool showAvatar;
   final bool tail;
+  final VoidCallback onEdits;
   final ChatMessage? replied;
   final bool isRead;
   final VoidCallback onActions;
@@ -507,8 +558,21 @@ class _Bubble extends ConsumerWidget {
     final footer = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (message.isDeleted) ...[
+          Icon(Icons.delete_outline, size: 13, color: colors.deleted),
+          Text(
+            ' ${context.l10n.messageDeleted}  ',
+            style: meta.copyWith(color: colors.deleted),
+          ),
+        ],
         if (message.isEdited)
-          Text('${context.l10n.messageEdited} ', style: meta),
+          GestureDetector(
+            onTap: onEdits,
+            child: Text(
+              '${context.l10n.messageEdited} ',
+              style: meta.copyWith(decoration: TextDecoration.underline),
+            ),
+          ),
         Text(DateFormat.Hm(locale).format(message.date), style: meta),
         if (out) ...[
           const SizedBox(width: 3),
@@ -629,6 +693,9 @@ class _Bubble extends ConsumerWidget {
             : BoxDecoration(
                 color: out ? colors.bubbleOut : colors.bubbleIn,
                 borderRadius: radius,
+                border: message.isDeleted
+                    ? Border.all(color: colors.deleted.withValues(alpha: 0.6))
+                    : null,
               ),
         child: content,
       ),
@@ -729,12 +796,14 @@ class _Composer extends StatelessWidget {
     required this.controller,
     required this.focusNode,
     required this.onSend,
+    required this.onTyping,
     this.editing = false,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final Future<void> Function() onSend;
+  final VoidCallback onTyping;
   final bool editing;
 
   @override
@@ -761,6 +830,9 @@ class _Composer extends StatelessWidget {
                     minLines: 1,
                     maxLines: 8,
                     textInputAction: TextInputAction.newline,
+                    onChanged: (v) {
+                      if (v.isNotEmpty) onTyping();
+                    },
                     decoration: InputDecoration(
                       hintText: context.l10n.composerHint,
                       hintStyle: TextStyle(color: colors.secondary),
