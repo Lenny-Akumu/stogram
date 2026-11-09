@@ -156,6 +156,23 @@ class UsersRepository {
     }
   }
 
+  Future<void> setName(String first, String last) =>
+      _td.send({'@type': 'setName', 'first_name': first, 'last_name': last});
+
+  Future<void> setBio(String bio) => _td.send({'@type': 'setBio', 'bio': bio});
+
+  Future<void> setUsername(String username) =>
+      _td.send({'@type': 'setUsername', 'username': username});
+
+  Future<void> setPhoto(String path) => _td.send({
+    '@type': 'setProfilePhoto',
+    'photo': {
+      '@type': 'inputChatPhotoStatic',
+      'photo': {'@type': 'inputFileLocal', 'path': path},
+    },
+    'is_public': false,
+  });
+
   void _onUpdate(TdObject u) {
     switch (u['@type']) {
       case 'updateUser':

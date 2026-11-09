@@ -328,5 +328,33 @@
   "messageDeleted": "видалено",
   "editHistoryTitle": "Історія редагувань",
   "editHistoryEmpty": "Попередніх версій не збережено",
-  "editHistoryCurrent": "Зараз"
+  "editHistoryCurrent": "Зараз",
+  "settingsTitle": "Налаштування",
+  "menuAppearance": "Вигляд",
+  "profileTitle": "Мій профіль",
+  "profileFirstName": "Ім'я",
+  "profileLastName": "Прізвище",
+  "profileBio": "Про себе",
+  "profileBioHint": "Кілька слів про себе",
+  "profileUsername": "Ім'я користувача",
+  "profileUsernameHint": "Без @, від 5 символів",
+  "profileChangePhoto": "Змінити фото",
+  "profileSaved": "Збережено",
+  "profileSaveError": "Не вдалося зберегти: {error}",
+  "appearanceTitle": "Вигляд",
+  "skinGroupClassic": "Класичні",
+  "skinGroupV4": "V4 — нові стилі",
+  "skinGroupV3": "V3 — чат на весь екран",
+  "skinGroupV2": "V2 — альтернативні",
+  "skinGroupV1": "V1 — класичні лейаути",
+  "skinLayoutNote": "Поки що кожен дизайн змінює кольори й шрифти. Власні розкладки (смуги по краях, док, колонки) — наступним кроком.",
+  "previewIncoming": "Привіт! Як справи?",
+  "previewOutgoing": "Все чудово 👌",
+  "@profileSaveError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
 }
