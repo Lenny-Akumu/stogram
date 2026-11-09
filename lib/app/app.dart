@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/l10n/l10n.dart';
+import '../ui/components/update_banner.dart';
 import 'providers.dart';
 import 'router.dart';
 import 'theme.dart';
@@ -30,6 +31,8 @@ class App extends ConsumerWidget {
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('uk'),
       routerConfig: ref.watch(routerProvider),
+      builder: (context, child) =>
+          UpdateGate(child: child ?? const SizedBox.shrink()),
     );
   }
 }

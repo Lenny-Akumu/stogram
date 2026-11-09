@@ -209,5 +209,29 @@
   "copied": "Скопійовано",
   "deleteTitle": "Видалити повідомлення?",
   "deleteForEveryone": "Також видалити для всіх",
-  "editing": "Редагування"
+  "editing": "Редагування",
+  "updateAvailable": "Доступне оновлення {tag}",
+  "updateAction": "Оновити",
+  "updateLater": "Пізніше",
+  "updateDownloading": "Завантаження оновлення… {percent}%",
+  "updateInstalling": "Встановлення…",
+  "updateReady": "Оновлення завантажене",
+  "updateInstallAction": "Встановити",
+  "updatePermission": "Дозволь встановлення з цього застосунку і натисни «Встановити»",
+  "updateFailed": "Не вдалося оновитися",
+  "updateRetry": "Ще раз",
+  "@updateAvailable": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      }
+    }
+  },
+  "@updateDownloading": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -25,3 +25,16 @@ APK — в артефакті `stogram-apk` на сторінці запуску
 Воркфлоу `Desktop builds` збирає TDLib під кожну платформу (теж з кешем) і кладе його в бандл: `stogram-linux-x64.tar.gz` (розпакуй і запусти `app`) та `stogram-windows-x64.zip` (`app.exe`, поруч `tdjson.dll` з залежностями).
 
 Кожен мерж у `main` публікує реліз `dev-<коміт>` (prerelease) з APK, Linux і Windows збірками.
+
+## Оновлення в застосунку
+
+Збірки з `main` знають свій тег (`BUILD_TAG`). На старті й кожні 6 годин застосунок дивиться найсвіжіший реліз цього репо, і якщо там новіший файл під його платформу — показує плашку «Оновити»: Android відкриває системний інсталятор, Linux розпаковує архів поверх себе й перезапускається, Windows підміняє файли скриптом після виходу.
+
+Підпис APK — постійний ключ із секретів `ANDROID_KEYSTORE_BASE64` і `ANDROID_KEYSTORE_PASSWORD` (alias `stogram`). Згенерувати:
+
+```bash
+keytool -genkeypair -keystore stogram.jks -storetype PKCS12 -alias stogram -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=stogram"
+base64 -w0 stogram.jks
+```
+
+Сам `.jks` не губи і в репо не клади: без нього нові APK не стануть поверх старих.

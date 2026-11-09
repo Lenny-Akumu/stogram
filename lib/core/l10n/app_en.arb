@@ -83,5 +83,15 @@
   "copied": "Copied",
   "deleteTitle": "Delete message?",
   "deleteForEveryone": "Also delete for everyone",
-  "editing": "Editing"
+  "editing": "Editing",
+  "updateAvailable": "Update {tag} is available",
+  "updateAction": "Update",
+  "updateLater": "Later",
+  "updateDownloading": "Downloading update… {percent}%",
+  "updateInstalling": "Installing…",
+  "updateReady": "Update downloaded",
+  "updateInstallAction": "Install",
+  "updatePermission": "Allow installs from this app, then tap Install",
+  "updateFailed": "Update failed",
+  "updateRetry": "Retry"
 }

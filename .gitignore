@@ -18,3 +18,7 @@ android/app/src/main/jniLibs/
 *.so
 *.dll
 *.dylib
+
+android/key.properties
+*.jks
+*.keystore
