@@ -17,6 +17,7 @@ import '../../ui/components/avatar.dart';
 import '../../ui/components/presence_text.dart';
 import '../../ui/components/preview_text.dart';
 import '../../ui/theme/chat_colors.dart';
+import '../../ui/theme/skin_provider.dart';
 import 'media_view.dart';
 
 enum _Mode { send, reply, edit }
@@ -679,6 +680,66 @@ class _Bubble extends ConsumerWidget {
           Align(alignment: Alignment.bottomRight, child: footer),
       ],
     );
+
+    final skin = ref.watch(skinProvider);
+    if (skin.typographic && media == null && reply == null) {
+      final wide = MediaQuery.sizeOf(context).width >= 760;
+      return GestureDetector(
+        onLongPress: onActions,
+        onSecondaryTap: onActions,
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: tail ? 14 : 4),
+          child: Column(
+            crossAxisAlignment: out
+                ? CrossAxisAlignment.end
+                : CrossAxisAlignment.start,
+            children: [
+              if (showSender && sender != null)
+                Text(
+                  sender.name.toUpperCase(),
+                  style: TextStyle(
+                    color: colors.secondary,
+                    fontSize: 12,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              Text(
+                text,
+                textAlign: out ? TextAlign.right : TextAlign.left,
+                style: TextStyle(
+                  fontSize: wide ? 30 : 21,
+                  height: 1.15,
+                  fontWeight: out ? FontWeight.w300 : FontWeight.w500,
+                  color: message.isDeleted
+                      ? colors.secondary
+                      : out
+                      ? colors.textOut
+                      : colors.textIn,
+                  decoration: message.isDeleted
+                      ? TextDecoration.lineThrough
+                      : null,
+                  decorationColor: colors.deleted,
+                  decorationThickness: 2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              if (message.isDeleted)
+                Text(
+                  context.l10n.monolithDeleted,
+                  style: TextStyle(
+                    color: colors.deleted,
+                    fontSize: 11,
+                    letterSpacing: 1.4,
+                    fontWeight: FontWeight.w700,
+                  ),
+                )
+              else
+                footer,
+            ],
+          ),
+        ),
+      );
+    }
 
     final bubble = GestureDetector(
       onLongPress: onActions,

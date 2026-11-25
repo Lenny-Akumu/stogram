@@ -157,5 +157,11 @@
   "skinGroupV1": "V1 — classic layouts",
   "skinLayoutNote": "For now every design changes colors and fonts. Their own layouts come next.",
   "previewIncoming": "Hi! How are you?",
-  "previewOutgoing": "All good 👌"
+  "previewOutgoing": "All good 👌",
+  "monolithDeleted": "DELETED · KEPT",
+  "edgeHintDesktop": "Hover the left edge for chats",
+  "edgeHintMobile": "Swipe from the left edge for chats",
+  "ayuOn": "ON",
+  "ayuOff": "OFF",
+  "edgeTools": "Tools"
 }

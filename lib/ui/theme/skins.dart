@@ -5,6 +5,8 @@ import 'chat_colors.dart';
 
 enum SkinGroup { classic, v4, v3, v2, v1 }
 
+enum SkinLayout { classic, edge }
+
 class Skin {
   const Skin({
     required this.id,
@@ -23,6 +25,14 @@ class Skin {
 
   /// Google Fonts family, null keeps the platform font.
   final String? font;
+
+  /// V3 and V4 live in the full-screen chat with edge strips.
+  SkinLayout get layout => group == SkinGroup.v4 || group == SkinGroup.v3
+      ? SkinLayout.edge
+      : SkinLayout.classic;
+
+  /// Messages as large type instead of bubbles.
+  bool get typographic => id == 'monolith';
 }
 
 Color _mix(Color a, Color b, double t) => Color.lerp(a, b, t)!;
