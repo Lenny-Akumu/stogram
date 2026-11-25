@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#0B0C0F"/>
+  <rect x="60" y="150" width="14" height="52" rx="7" fill="#2A2D33"/><rect x="60" y="230" width="14" height="52" rx="7" fill="#8AF0C8"/><rect x="60" y="310" width="14" height="52" rx="7" fill="#2A2D33"/>
+  <rect x="438" y="190" width="14" height="52" rx="7" fill="#2A2D33"/><rect x="438" y="270" width="14" height="52" rx="7" fill="#2A2D33"/>
+  <!-- rounded triangle bubble pointing up-right, tail bottom-left -->
+  <path d="M372 132c14-5 27 8 22 22l-78 214c-5 14-24 16-32 3l-36-58-62 30c-8 4-16-4-12-12l30-62-58-36c-13-8-11-27 3-32z" fill="none" stroke="#8AF0C8" stroke-width="22" stroke-linejoin="round"/>
+  <rect x="214" y="214" width="96" height="18" rx="9" fill="#EDEEF0" transform="rotate(-20 262 223)"/>
+  <rect x="226" y="254" width="62" height="18" rx="9" fill="#8A8F98" transform="rotate(-20 257 263)"/>
+</svg>
