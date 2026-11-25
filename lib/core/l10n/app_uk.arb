@@ -356,5 +356,11 @@
         "type": "String"
       }
     }
-  }
+  },
+  "monolithDeleted": "СТЕРТО · ЗБЕРЕЖЕНО",
+  "edgeHintDesktop": "Наведи на лівий край — там чати",
+  "edgeHintMobile": "Свайпни від лівого краю — там чати",
+  "ayuOn": "УВІМК",
+  "ayuOff": "ВИМК",
+  "edgeTools": "Інструменти"
 }

@@ -1,0 +1,107 @@
+import 'package:app/app/app.dart';
+import 'package:app/app/providers.dart';
+import 'package:app/core/l10n/l10n.dart';
+import 'package:app/ui/shell/edge_shell.dart';
+import 'package:app/ui/shell/shell_switch.dart';
+import 'package:app/ui/theme/skin_provider.dart';
+import 'package:app/ui/theme/skins.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import '../fakes/fake_td.dart';
+
+class _Monolith extends SkinSetting {
+  @override
+  Skin build() => skinById('monolith');
+}
+
+Map<String, dynamic> _chat(int id, String title, {int unread = 0}) => {
+  '@type': 'updateNewChat',
+  'chat': {
+    'id': id,
+    'title': title,
+    'unread_count': unread,
+    'positions': [
+      {
+        'list': {'@type': 'chatListMain'},
+        'order': '${100 - id}',
+      },
+    ],
+  },
+};
+
+Future<FakeTd> _pump(WidgetTester t, Size size) async {
+  t.view.physicalSize = size;
+  t.view.devicePixelRatio = 1;
+  addTearDown(t.view.reset);
+  final td = FakeTd()..handler = (_) => {'messages': <Object>[]};
+  await t.pumpWidget(
+    ProviderScope(
+      overrides: [
+        tdApiProvider.overrideWithValue(td),
+        skinProvider.overrideWith(_Monolith.new),
+      ],
+      child: const MaterialApp(
+        locale: Locale('uk'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: appLocalizationDelegates,
+        home: ShellSwitch(),
+      ),
+    ),
+  );
+  td
+    ..push(_chat(1, 'Софія', unread: 2))
+    ..push(_chat(2, 'Марко'));
+  await t.pumpAndSettle();
+  return td;
+}
+
+double _leftPanelX(WidgetTester t) {
+  final text = find.text('Софія').last;
+  return t.getTopLeft(text).dx;
+}
+
+void main() {
+  testWidgets('edge skins use the edge shell', (t) async {
+    await _pump(t, const Size(1400, 900));
+    expect(find.byType(EdgeShell), findsOneWidget);
+  });
+
+  testWidgets('hovering the left edge opens chats, leaving closes', (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    await _pump(t, const Size(1400, 900));
+    expect(_leftPanelX(t), lessThan(0));
+
+    final mouse = await t.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(mouse.removePointer);
+    await mouse.addPointer(location: const Offset(700, 450));
+    await t.pump();
+    await mouse.moveTo(const Offset(20, 450));
+    await t.pumpAndSettle();
+    expect(_leftPanelX(t), greaterThanOrEqualTo(0));
+
+    await mouse.moveTo(const Offset(1200, 450));
+    await t.pumpAndSettle();
+    expect(_leftPanelX(t), lessThan(0));
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('phone swipe from the edge opens, tap on scrim closes', (
+    t,
+  ) async {
+    await _pump(t, const Size(400, 800));
+    expect(_leftPanelX(t), lessThan(0));
+
+    await t.dragFrom(const Offset(4, 400), const Offset(260, 0));
+    await t.pumpAndSettle();
+    expect(_leftPanelX(t), greaterThanOrEqualTo(0));
+
+    await t.tapAt(const Offset(390, 400));
+    await t.pumpAndSettle();
+    expect(_leftPanelX(t), lessThan(0));
+  });
+}

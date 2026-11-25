@@ -8,7 +8,7 @@ import '../features/settings/appearance_screen.dart';
 import '../features/settings/ayu_settings_screen.dart';
 import '../features/settings/profile_screen.dart';
 import '../features/settings/settings_screen.dart';
-import '../ui/shell/classic_shell.dart';
+import '../ui/shell/shell_switch.dart';
 import 'providers.dart';
 
 abstract final class Routes {
@@ -54,12 +54,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.auth, builder: (_, _) => const AuthScreen()),
       GoRoute(
         path: Routes.chats,
-        builder: (_, _) => const ClassicShell(),
+        builder: (_, _) => const ShellSwitch(),
         routes: [
           GoRoute(
             path: ':id',
             builder: (_, state) =>
-                ClassicShell(chatId: int.parse(state.pathParameters['id']!)),
+                ShellSwitch(chatId: int.parse(state.pathParameters['id']!)),
           ),
         ],
       ),
