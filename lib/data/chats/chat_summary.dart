@@ -68,7 +68,16 @@ class ChatSummary {
     this.isGroup = false,
     this.photo,
     this.peer = const ChatPeer(),
+    this.isMuted = false,
+    this.isArchived = false,
+    this.markedUnread = false,
+    this.unreadMentions = 0,
   });
+
+  final bool isMuted;
+  final bool isArchived;
+  final bool markedUnread;
+  final int unreadMentions;
 
   final int id;
   final String title;

@@ -99,4 +99,54 @@ void main() {
     await repo.loadMore();
     expect(td.sent, hasLength(1));
   });
+
+  test('archive, folders and mute are tracked per list', () async {
+    td
+      ..push(_newChat(1, 'main', 10))
+      ..push({
+        '@type': 'updateNewChat',
+        'chat': {
+          'id': 2,
+          'title': 'arch',
+          'unread_count': 3,
+          'notification_settings': {'mute_for': 100},
+          'positions': [
+            {
+              'list': {'@type': 'chatListArchive'},
+              'order': '5',
+              'is_pinned': false,
+            },
+            {
+              'list': {'@type': 'chatListFolder', 'chat_folder_id': 4},
+              'order': '7',
+              'is_pinned': true,
+            },
+          ],
+        },
+      })
+      ..push({
+        '@type': 'updateChatFolders',
+        'chat_folders': [
+          {
+            'id': 4,
+            'name': {
+              'text': {'text': 'Робота'},
+            },
+          },
+        ],
+      });
+    await settle();
+    expect(repo.listFor('main').map((c) => c.id), [1]);
+    expect(repo.listFor('archive').single.isArchived, isTrue);
+    final f = repo.listFor('f4').single;
+    expect(f.isPinned, isTrue);
+    expect(f.isMuted, isTrue);
+    expect(repo.folders.single.name, 'Робота');
+    expect(repo.unreadIn('archive'), 0);
+
+    await repo.setArchived(1, true);
+    expect(td.sent.last['chat_list'], {'@type': 'chatListArchive'});
+    await repo.togglePin(2, 'f4');
+    expect(td.sent.last['is_pinned'], isFalse);
+  });
 }
