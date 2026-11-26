@@ -200,4 +200,103 @@ void main() {
       77,
     );
   });
+
+  testWidgets('poll, bot buttons, quote and service render and work', (
+    tester,
+  ) async {
+    final poll = {
+      'id': 10,
+      'chat_id': 7,
+      'is_outgoing': false,
+      'date': 1700000000,
+      'edit_date': 0,
+      'content': {
+        '@type': 'messagePoll',
+        'poll': {
+          'id': 5,
+          'question': {'text': 'Пиво чи горілка?'},
+          'options': [
+            {
+              'text': {'text': 'Пиво'},
+              'voter_count': 0,
+              'vote_percentage': 0,
+            },
+            {
+              'text': {'text': 'Горілка'},
+              'voter_count': 0,
+              'vote_percentage': 0,
+            },
+          ],
+          'total_voter_count': 0,
+          'type': {'@type': 'pollTypeRegular'},
+        },
+      },
+    };
+    final bot = {
+      ..._msg(11, 'цитата і /start'),
+      'content': {
+        '@type': 'messageText',
+        'text': {
+          'text': 'цитата і /start',
+          'entities': [
+            {
+              'offset': 0,
+              'length': 6,
+              'type': {'@type': 'textEntityTypeBlockQuote'},
+            },
+            {
+              'offset': 9,
+              'length': 6,
+              'type': {'@type': 'textEntityTypeBotCommand'},
+            },
+          ],
+        },
+      },
+      'reply_markup': {
+        '@type': 'replyMarkupInlineKeyboard',
+        'rows': [
+          [
+            {
+              'text': 'Тиць',
+              'type': {
+                '@type': 'inlineKeyboardButtonTypeCallback',
+                'data': 'AA==',
+              },
+            },
+          ],
+        ],
+      },
+    };
+    final service = {
+      ..._msg(12, ''),
+      'content': {'@type': 'messageScreenshotTaken'},
+    };
+    final td = FakeTd()
+      ..handler = (r) => switch (r['@type']) {
+        'getChatHistory' when r['from_message_id'] == 0 => {
+          'messages': [service, bot, poll],
+        },
+        'getChatHistory' => {'messages': <Object>[]},
+        'getCallbackQueryAnswer' => {
+          '@type': 'callbackQueryAnswer',
+          'text': 'Готово',
+          'show_alert': false,
+          'url': '',
+        },
+        _ => {'@type': 'ok'},
+      };
+    await tester.pumpWidget(_app(td));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Пиво чи горілка?'), findsOneWidget);
+    expect(find.textContaining('знімок екрана'), findsOneWidget);
+    await tester.tap(find.text('Горілка'));
+    await tester.pumpAndSettle();
+    final vote = td.sent.lastWhere((r) => r['@type'] == 'setPollAnswer');
+    expect(vote['option_ids'], [1]);
+
+    await tester.tap(find.text('Тиць'));
+    await tester.pumpAndSettle();
+    expect(find.text('Готово'), findsOneWidget);
+  });
 }

@@ -2,6 +2,8 @@ import 'package:app/core/ayu/ayu_settings.dart';
 import 'package:app/data/chats/chat_summary.dart';
 import 'package:app/data/messages/chat_message.dart';
 import 'package:app/data/messages/messages_repository.dart';
+import 'package:app/data/messages/reply_markup.dart';
+import 'package:app/data/messages/message_media.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../fakes/fake_td.dart';
@@ -97,7 +99,8 @@ void main() {
     });
     expect(repo.current.single.id, 55);
     expect(repo.current.single.sendState, SendState.sent);
-    final req = td.sent.single;
+    expect(td.sent.first['@type'], 'parseMarkdown');
+    final req = td.sent.last;
     expect(req['@type'], 'sendMessage');
     expect((req['input_message_content'] as Map)['@type'], 'inputMessageText');
   });
@@ -240,5 +243,119 @@ void main() {
     await pumpEventQueue();
     expect(repo.repliedTo(m)?.content.text, 'original');
     expect(td.sent.where((r) => r['@type'] == 'getMessage'), hasLength(1));
+  });
+
+  test('markdown is parsed into entities before sending', () async {
+    final parsed = {
+      '@type': 'formattedText',
+      'text': 'bold',
+      'entities': [
+        {
+          '@type': 'textEntity',
+          'offset': 0,
+          'length': 4,
+          'type': {'@type': 'textEntityTypeBold'},
+        },
+      ],
+    };
+    td.handler = (r) =>
+        r['@type'] == 'parseMarkdown' ? parsed : _msg(9, out: true);
+    await repo.sendText('**bold**');
+    final content = td.sent.last['input_message_content'] as Map;
+    expect(content['text'], parsed);
+  });
+
+  test('poll vote, callback and poll update', () async {
+    td.push({
+      '@type': 'updateNewMessage',
+      'message': {
+        ..._msg(3),
+        'content': {
+          '@type': 'messagePoll',
+          'poll': {
+            'id': 77,
+            'question': {'text': 'Q'},
+            'options': [
+              {
+                'text': {'text': 'a'},
+                'voter_count': 0,
+                'vote_percentage': 0,
+              },
+            ],
+            'total_voter_count': 0,
+            'type': {'@type': 'pollTypeRegular'},
+          },
+        },
+      },
+    });
+    expect((repo.current.single.media! as PollMedia).voted, isFalse);
+    await repo.votePoll(3, [0]);
+    expect(td.sent.last['@type'], 'setPollAnswer');
+    td.push({
+      '@type': 'updatePoll',
+      'poll': {
+        'id': 77,
+        'question': {'text': 'Q'},
+        'options': [
+          {
+            'text': {'text': 'a'},
+            'voter_count': 1,
+            'vote_percentage': 100,
+            'is_chosen': true,
+          },
+        ],
+        'total_voter_count': 1,
+        'type': {'@type': 'pollTypeRegular'},
+      },
+    });
+    final poll = repo.current.single.media! as PollMedia;
+    expect(poll.voted, isTrue);
+    expect(poll.options.single.percent, 100);
+
+    td.handler = (_) => {
+      '@type': 'callbackQueryAnswer',
+      'text': 'done',
+      'show_alert': true,
+      'url': '',
+    };
+    final a = await repo.pressCallback(
+      3,
+      const MarkupButton('b', ButtonKind.callback, data: 'AQI='),
+    );
+    expect(a.text, 'done');
+    expect(a.alert, isTrue);
+    expect((td.sent.last['payload'] as Map)['data'], 'AQI=');
+  });
+
+  test('inline keyboard is parsed from reply_markup', () {
+    final m = ChatMessage.fromJson({
+      ..._msg(4),
+      'reply_markup': {
+        '@type': 'replyMarkupInlineKeyboard',
+        'rows': [
+          [
+            {
+              'text': 'Go',
+              'type': {
+                '@type': 'inlineKeyboardButtonTypeUrl',
+                'url': 'https://x',
+              },
+            },
+            {
+              'text': 'Cb',
+              'type': {
+                '@type': 'inlineKeyboardButtonTypeCallback',
+                'data': 'AA==',
+              },
+            },
+          ],
+        ],
+      },
+    });
+    final k = m.markup! as InlineKeyboard;
+    expect(k.rows.single.map((b) => b.kind), [
+      ButtonKind.url,
+      ButtonKind.callback,
+    ]);
   });
 }

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -13,6 +14,8 @@ import '../../data/chats/chat_summary.dart';
 import '../../data/messages/chat_message.dart';
 import '../../data/messages/message_media.dart';
 import '../../data/messages/messages_repository.dart';
+import '../../data/messages/reply_markup.dart';
+import '../../data/messages/rich_text.dart';
 import '../../ui/components/avatar.dart';
 import '../../ui/components/audio_bar.dart';
 import '../../ui/components/presence_text.dart';
@@ -20,7 +23,9 @@ import '../../ui/components/preview_text.dart';
 import '../../ui/components/rich_message_text.dart';
 import '../../ui/theme/chat_colors.dart';
 import '../../ui/theme/skin_provider.dart';
+import 'chat_extras.dart';
 import 'media_view.dart';
+import 'poll_view.dart';
 
 enum _Mode { send, reply, edit }
 
@@ -44,6 +49,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   _Mode _mode = _Mode.send;
   ChatMessage? _target;
   bool _showDown = false;
+  bool _keyboardOpen = true;
+  bool _commandsOpen = false;
 
   @override
   void initState() {
@@ -112,6 +119,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
     if (mode == _Mode.edit && target != null) {
       _input.text = target.content.text;
+      unawaited(
+        _repo.markdownOf(target).then((md) {
+          if (!mounted || _target != target) return;
+          _input.text = md;
+          _input.selection = TextSelection.collapsed(offset: md.length);
+        }),
+      );
       _input.selection = TextSelection.collapsed(offset: _input.text.length);
     } else if (mode == _Mode.send) {
       _input.clear();
@@ -167,6 +181,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 title: Text(l10n.actionCopy),
                 onTap: () => Navigator.pop(context, 'copy'),
               ),
+            if (actions.canForward)
+              ListTile(
+                leading: const Icon(Icons.forward),
+                title: Text(l10n.actionForward),
+                onTap: () => Navigator.pop(context, 'forward'),
+              ),
+            if (actions.canPin)
+              ListTile(
+                leading: Icon(
+                  m.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+                ),
+                title: Text(m.isPinned ? l10n.actionUnpin : l10n.actionPin),
+                onTap: () => Navigator.pop(context, 'pin'),
+              ),
             if (actions.canEdit)
               ListTile(
                 leading: const Icon(Icons.edit),
@@ -197,7 +225,172 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ).showSnackBar(SnackBar(content: Text(l10n.copied)));
       case 'delete':
         await _confirmDelete(m, actions);
+      case 'pin':
+        await _guard(() => _repo.pin(m.id, unpin: m.isPinned));
+      case 'forward':
+        await _forward(m);
     }
+  }
+
+  Future<void> _guard(Future<void> Function() f) async {
+    try {
+      await f();
+    } on TdError catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  Future<void> _forward(ChatMessage m) async {
+    final chats = ref.read(chatsProvider).value ?? const <ChatSummary>[];
+    final to = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.7,
+        builder: (context, scroll) => ListView(
+          controller: scroll,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                context.l10n.forwardTo,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            for (final c in chats)
+              ListTile(
+                leading: Avatar(
+                  id: c.id,
+                  title: c.title,
+                  photo: c.photo,
+                  size: 40,
+                ),
+                title: Text(c.title, maxLines: 1),
+                onTap: () => Navigator.pop(context, c.id),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (to == null) return;
+    await _guard(() => _repo.forward(to, [m.id]));
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.forwarded)));
+    }
+  }
+
+  Future<void> _attach() async {
+    final l10n = context.l10n;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.attach_file),
+              title: Text(l10n.attachFile),
+              onTap: () => Navigator.pop(context, 'file'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.poll_outlined),
+              title: Text(l10n.pollNew),
+              onTap: () => Navigator.pop(context, 'poll'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.casino_outlined),
+              title: Text(l10n.attachDice),
+              onTap: () => Navigator.pop(context, 'dice'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    switch (choice) {
+      case 'file':
+        final files = await openFiles();
+        final caption = _input.text.trim();
+        if (files.isNotEmpty) _input.clear();
+        for (final (i, f) in files.indexed) {
+          await _guard(
+            () => _repo.sendFile(f.path, caption: i == 0 ? caption : ''),
+          );
+        }
+      case 'poll':
+        final p = await showNewPollDialog(context);
+        if (p == null) return;
+        await _guard(
+          () => _repo.sendPoll(
+            question: p.question,
+            options: p.options,
+            anonymous: p.anonymous,
+            multiple: p.multiple,
+            quiz: p.quiz,
+            correct: p.correct,
+          ),
+        );
+      case 'dice':
+        final emoji = await showModalBottomSheet<String>(
+          context: context,
+          builder: (context) => SafeArea(
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              children: [
+                for (final e in const ['🎲', '🎯', '🏀', '⚽', '🎳', '🎰'])
+                  InkWell(
+                    onTap: () => Navigator.pop(context, e),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Text(e, style: const TextStyle(fontSize: 36)),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+        if (emoji != null) await _guard(() => _repo.sendDice(emoji));
+    }
+  }
+
+  bool _onEntity(TextSpanInfo s, String raw) {
+    switch (s.kind) {
+      case SpanKind.botCommand:
+        unawaited(_guard(() => _repo.sendText(raw)));
+        return true;
+      case SpanKind.mentionName:
+        if (s.userId != null) unawaited(openUserChat(context, ref, s.userId!));
+        return true;
+      case SpanKind.mention:
+        unawaited(
+          openSmartLink(context, ref, 'https://t.me/${raw.substring(1)}'),
+        );
+        return true;
+      case SpanKind.url || SpanKind.textUrl:
+        unawaited(
+          openSmartLink(context, ref, s.kind == SpanKind.textUrl ? s.url : raw),
+        );
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  void _pressReply(MarkupButton b) {
+    final k = _repo.replyKeyboard;
+    unawaited(_guard(() => _repo.sendText(b.text)));
+    if (k != null && k.oneTime) setState(() => _keyboardOpen = false);
   }
 
   Future<void> _showEdits(ChatMessage m) async {
@@ -325,6 +518,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       body: Column(
         children: [
           const AudioBar(),
+          if (_repo.pinned case final pin?)
+            _PinnedBar(
+              message: pin,
+              onClose: () => _guard(() => _repo.pin(pin.id, unpin: true)),
+            ),
           Expanded(
             child: Stack(
               children: [
@@ -364,6 +562,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         tail: lastInGroup,
                         replied: _repo.repliedTo(m),
                         isRead: _repo.isRead(m),
+                        repo: _repo,
+                        onEntity: _onEntity,
+                        onSwitchInline: (q) {
+                          _input.text = q;
+                          _inputFocus.requestFocus();
+                        },
                         onActions: () => _showActions(m),
                         onEdits: () => _showEdits(m),
                       );
@@ -408,13 +612,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               text: previewText(context, _target!.content),
               onClose: () => _setMode(_Mode.send),
             ),
+          if (_commandsOpen && _repo.commands.isNotEmpty)
+            CommandsList(
+              commands: _repo.commands,
+              onPick: (c) {
+                setState(() => _commandsOpen = false);
+                unawaited(_guard(() => _repo.sendText('/${c.command}')));
+              },
+            ),
           _Composer(
             controller: _input,
             focusNode: _inputFocus,
             onSend: _submit,
             onTyping: () => unawaited(_repo.sendTyping()),
             editing: _mode == _Mode.edit,
+            onAttach: _attach,
+            hasCommands: _repo.commands.isNotEmpty,
+            onCommands: () => setState(() => _commandsOpen = !_commandsOpen),
+            hasKeyboard: _repo.replyKeyboard != null,
+            keyboardOpen: _keyboardOpen,
+            onKeyboard: () => setState(() => _keyboardOpen = !_keyboardOpen),
+            hint: _repo.replyKeyboard?.placeholder,
           ),
+          if (_repo.replyKeyboard case final k? when _keyboardOpen)
+            ReplyKeyboardView(keyboard: k, onPress: _pressReply),
         ],
       ),
     );
@@ -515,10 +736,16 @@ class _Bubble extends ConsumerWidget {
     required this.tail,
     required this.onActions,
     required this.onEdits,
+    required this.repo,
+    required this.onEntity,
+    required this.onSwitchInline,
     this.replied,
     this.isRead = false,
   });
 
+  final MessagesRepository repo;
+  final EntityTap onEntity;
+  final ValueChanged<String> onSwitchInline;
   final ChatMessage message;
   final bool showSender;
   final bool showAvatar;
@@ -554,11 +781,30 @@ class _Bubble extends ConsumerWidget {
         _senderColors[(senderId ?? 0).abs() % _senderColors.length];
     final reply = replied;
     final media = message.media;
+    if (media is ServiceMedia && media.isPill) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Center(
+          child: GestureDetector(
+            onSecondaryTap: onActions,
+            onLongPress: onActions,
+            child: _Pill(text: serviceText(context, ref, message, media)),
+          ),
+        ),
+      );
+    }
     final sticker = media is StickerMedia;
     final roundVideo = media is VideoMedia && media.isRound;
     final bare = sticker || roundVideo;
     final text = media == null
         ? previewText(context, message.content)
+        : media is ServiceMedia
+        ? serviceText(context, ref, message, media)
+        : media is PollMedia ||
+              media is LocationMedia ||
+              media is ContactMedia ||
+              media is DiceMedia
+        ? ''
         : message.content.text;
     final maxWidth = MediaQuery.sizeOf(context).width * 0.72;
 
@@ -602,10 +848,9 @@ class _Bubble extends ConsumerWidget {
               message: context.l10n.messageSendFailed,
               child: Icon(Icons.error_outline, size: 13, color: colors.deleted),
             ),
-            SendState.sent => Icon(
-              isRead ? Icons.done_all : Icons.done,
-              size: 15,
-              color: metaColor,
+            SendState.sent => MessageTicks(
+              read: isRead,
+              color: isRead ? _readColor(colors) : metaColor,
             ),
           },
         ],
@@ -625,6 +870,20 @@ class _Bubble extends ConsumerWidget {
                 color: senderColor,
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
+              ),
+            ),
+          ),
+        if (message.forward case final f?)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 3),
+            child: Text(
+              context.l10n.forwardedFrom(_forwardName(ref, f)),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: out ? fg : colors.accent,
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
               ),
             ),
           ),
@@ -674,6 +933,8 @@ class _Bubble extends ConsumerWidget {
                   media: media,
                   maxWidth: maxWidth - 16,
                   outgoing: out,
+                  chatId: message.chatId,
+                  messageId: message.id,
                 ),
               ),
             ),
@@ -689,6 +950,7 @@ class _Bubble extends ConsumerWidget {
                 spans: message.spans,
                 style: TextStyle(color: fg, fontSize: 15, height: 1.3),
                 linkColor: out ? fg : colors.accent,
+                onEntity: onEntity,
               ),
               if (message.linkPreview != null)
                 LinkPreviewCard(
@@ -706,7 +968,11 @@ class _Bubble extends ConsumerWidget {
     );
 
     final skin = ref.watch(skinProvider);
-    if (skin.typographic && media == null && reply == null) {
+    if (skin.typographic &&
+        media == null &&
+        reply == null &&
+        message.markup == null &&
+        message.spans.isEmpty) {
       final wide = MediaQuery.sizeOf(context).width >= 760;
       return GestureDetector(
         onLongPress: onActions,
@@ -804,9 +1070,95 @@ class _Bubble extends ConsumerWidget {
           ),
         ConstrainedBox(
           constraints: BoxConstraints(maxWidth: maxWidth),
-          child: bubble,
+          child: message.markup is InlineKeyboard
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    bubble,
+                    Padding(
+                      padding: EdgeInsets.only(bottom: tail ? 6 : 2),
+                      child: InlineKeyboardView(
+                        keyboard: message.markup! as InlineKeyboard,
+                        message: message,
+                        repo: repo,
+                        maxWidth: maxWidth,
+                        onSwitchInline: onSwitchInline,
+                      ),
+                    ),
+                  ],
+                )
+              : bubble,
         ),
       ],
+    );
+  }
+
+  static Color _readColor(ChatColors c) {
+    final diff = (c.accent.computeLuminance() - c.bubbleOut.computeLuminance())
+        .abs();
+    return diff > 0.2 ? c.accent : c.metaOut;
+  }
+
+  static String _forwardName(WidgetRef ref, ForwardOrigin f) {
+    if (f.userId != null) {
+      return ref.read(usersRepositoryProvider).nameOf(f.userId!) ?? f.name;
+    }
+    if (f.chatId != null) {
+      final chats = ref.read(chatsProvider).value ?? const <ChatSummary>[];
+      final c = chats.where((c) => c.id == f.chatId).firstOrNull;
+      if (c != null) return c.title;
+    }
+    return f.name;
+  }
+}
+
+class _PinnedBar extends StatelessWidget {
+  const _PinnedBar({required this.message, required this.onClose});
+
+  final ChatMessage message;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = ChatColors.of(context);
+    return Material(
+      color: colors.panel,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 4, 0, 4),
+        child: Row(
+          children: [
+            Container(width: 2, height: 32, color: colors.accent),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.pinnedMessage,
+                    style: TextStyle(
+                      color: colors.accent,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  Text(
+                    previewText(context, message.content),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: context.l10n.actionUnpin,
+              icon: Icon(Icons.close, size: 18, color: colors.secondary),
+              onPressed: onClose,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -882,14 +1234,72 @@ class _Composer extends StatelessWidget {
     required this.focusNode,
     required this.onSend,
     required this.onTyping,
+    required this.onAttach,
+    required this.onCommands,
+    required this.onKeyboard,
     this.editing = false,
+    this.hasCommands = false,
+    this.hasKeyboard = false,
+    this.keyboardOpen = false,
+    this.hint,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final Future<void> Function() onSend;
   final VoidCallback onTyping;
+  final VoidCallback onAttach;
+  final VoidCallback onCommands;
+  final VoidCallback onKeyboard;
   final bool editing;
+  final bool hasCommands;
+  final bool hasKeyboard;
+  final bool keyboardOpen;
+  final String? hint;
+
+  Widget _menu(BuildContext context, EditableTextState state) {
+    final l10n = context.l10n;
+    final sel = controller.selection;
+    final items = [...state.contextMenuButtonItems];
+    if (sel.isValid && !sel.isCollapsed) {
+      void fmt(String open, [String? close]) {
+        wrapSelection(controller, open, close);
+        state.hideToolbar();
+      }
+
+      items.addAll([
+        ContextMenuButtonItem(label: l10n.fmtBold, onPressed: () => fmt('**')),
+        ContextMenuButtonItem(
+          label: l10n.fmtItalic,
+          onPressed: () => fmt('__'),
+        ),
+        ContextMenuButtonItem(
+          label: l10n.fmtStrike,
+          onPressed: () => fmt('~~'),
+        ),
+        ContextMenuButtonItem(
+          label: l10n.fmtSpoiler,
+          onPressed: () => fmt('||'),
+        ),
+        ContextMenuButtonItem(label: l10n.fmtCode, onPressed: () => fmt('`')),
+        ContextMenuButtonItem(
+          label: l10n.fmtPre,
+          onPressed: () => fmt('```\n', '\n```'),
+        ),
+        ContextMenuButtonItem(
+          label: l10n.fmtLink,
+          onPressed: () {
+            state.hideToolbar();
+            unawaited(insertLink(context, controller));
+          },
+        ),
+      ]);
+    }
+    return AdaptiveTextSelectionToolbar.buttonItems(
+      anchors: state.contextMenuAnchors,
+      buttonItems: items,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -899,15 +1309,61 @@ class _Composer extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 6, 4),
+          padding: const EdgeInsets.fromLTRB(2, 4, 6, 4),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              IconButton(
+                tooltip: context.l10n.attach,
+                color: colors.secondary,
+                onPressed: onAttach,
+                icon: const Icon(Icons.attach_file),
+              ),
+              if (hasCommands)
+                IconButton(
+                  tooltip: context.l10n.botCommands,
+                  color: colors.accent,
+                  onPressed: onCommands,
+                  icon: const Icon(Icons.terminal),
+                ),
               Expanded(
                 child: CallbackShortcuts(
                   bindings: {
                     if (_isDesktop)
                       const SingleActivator(LogicalKeyboardKey.enter): onSend,
+                    const SingleActivator(
+                      LogicalKeyboardKey.keyB,
+                      control: true,
+                    ): () =>
+                        wrapSelection(controller, '**'),
+                    const SingleActivator(
+                      LogicalKeyboardKey.keyI,
+                      control: true,
+                    ): () =>
+                        wrapSelection(controller, '__'),
+                    const SingleActivator(
+                      LogicalKeyboardKey.keyX,
+                      control: true,
+                      shift: true,
+                    ): () =>
+                        wrapSelection(controller, '~~'),
+                    const SingleActivator(
+                      LogicalKeyboardKey.keyP,
+                      control: true,
+                      shift: true,
+                    ): () =>
+                        wrapSelection(controller, '||'),
+                    const SingleActivator(
+                      LogicalKeyboardKey.keyM,
+                      control: true,
+                      shift: true,
+                    ): () =>
+                        wrapSelection(controller, '`'),
+                    const SingleActivator(
+                      LogicalKeyboardKey.keyK,
+                      control: true,
+                    ): () =>
+                        unawaited(insertLink(context, controller)),
                   },
                   child: TextField(
                     controller: controller,
@@ -915,11 +1371,14 @@ class _Composer extends StatelessWidget {
                     minLines: 1,
                     maxLines: 8,
                     textInputAction: TextInputAction.newline,
+                    contextMenuBuilder: _menu,
                     onChanged: (v) {
                       if (v.isNotEmpty) onTyping();
                     },
                     decoration: InputDecoration(
-                      hintText: context.l10n.composerHint,
+                      hintText: (hint?.isNotEmpty ?? false)
+                          ? hint
+                          : context.l10n.composerHint,
                       hintStyle: TextStyle(color: colors.secondary),
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
@@ -928,6 +1387,15 @@ class _Composer extends StatelessWidget {
                   ),
                 ),
               ),
+              if (hasKeyboard)
+                IconButton(
+                  tooltip: context.l10n.botKeyboard,
+                  color: keyboardOpen ? colors.accent : colors.secondary,
+                  onPressed: onKeyboard,
+                  icon: Icon(
+                    keyboardOpen ? Icons.keyboard_hide : Icons.keyboard,
+                  ),
+                ),
               IconButton(
                 tooltip: editing
                     ? context.l10n.actionSave

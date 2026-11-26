@@ -9,6 +9,7 @@ import '../chats/chat_summary.dart';
 import '../stickers/stickers_repository.dart';
 import 'chat_message.dart';
 import 'message_media.dart';
+import 'reply_markup.dart';
 
 class MessagesRepository {
   MessagesRepository(
@@ -72,10 +73,18 @@ class MessagesRepository {
     try {
       final chat = await _td.send({'@type': 'getChat', 'chat_id': chatId});
       _lastReadOutbox = chat['last_read_outbox_message_id'] as int? ?? 0;
+      replyMarkupMessageId = chat['reply_markup_message_id'] as int? ?? 0;
+      unawaited(_loadCommands(chat['type'] as TdObject?));
+      unawaited(loadPinned());
     } on TdError {
       // ticks just stay single
     }
     await loadOlder();
+    if (replyMarkupMessageId != 0 && !_byId.containsKey(replyMarkupMessageId)) {
+      await _fetchReply(replyMarkupMessageId);
+      final m = _replies[replyMarkupMessageId];
+      if (m != null) _put(m);
+    }
   }
 
   Future<void> close() => _td.send({'@type': 'closeChat', 'chat_id': chatId});
@@ -154,19 +163,46 @@ class MessagesRepository {
     }
   }
 
-  static TdObject _textContent(String text) => {
+  /// Markdown from the composer to a formattedText with entities.
+  Future<TdObject> formatted(String text) async {
+    final plain = {'@type': 'formattedText', 'text': text, 'entities': []};
+    try {
+      final res = await _td.send({'@type': 'parseMarkdown', 'text': plain});
+      return res['@type'] == 'formattedText' ? res : plain;
+    } on TdError {
+      return plain;
+    }
+  }
+
+  /// Turns a message back into composer markdown.
+  Future<String> markdownOf(ChatMessage m) async {
+    final f = m.formatted;
+    if (f == null) return m.content.text;
+    try {
+      final res = await _td.send({'@type': 'getMarkdownText', 'text': f});
+      return res['@type'] == 'formattedText'
+          ? res['text'] as String? ?? m.content.text
+          : m.content.text;
+    } on TdError {
+      return m.content.text;
+    }
+  }
+
+  Future<TdObject> _textContent(String text) async => {
     '@type': 'inputMessageText',
-    'text': {'@type': 'formattedText', 'text': text},
+    'text': await formatted(text),
   };
+
+  TdObject? _replyTo(int? id) => id == null
+      ? null
+      : {'@type': 'inputMessageReplyToMessage', 'message_id': id};
 
   Future<void> sendText(String text, {int? replyTo}) async {
     final res = await _td.send({
       '@type': 'sendMessage',
       'chat_id': chatId,
-      'reply_to': ?(replyTo == null
-          ? null
-          : {'@type': 'inputMessageReplyToMessage', 'message_id': replyTo}),
-      'input_message_content': _textContent(text),
+      'reply_to': ?_replyTo(replyTo),
+      'input_message_content': await _textContent(text),
     });
     _put(ChatMessage.fromJson(res));
     final ayu = _settings();
@@ -216,10 +252,219 @@ class MessagesRepository {
       '@type': 'editMessageText',
       'chat_id': chatId,
       'message_id': messageId,
-      'input_message_content': _textContent(text),
+      'input_message_content': await _textContent(text),
     });
     _put(ChatMessage.fromJson(res));
   }
+
+  Future<void> sendPoll({
+    required String question,
+    required List<String> options,
+    bool anonymous = true,
+    bool multiple = false,
+    bool quiz = false,
+    int correct = 0,
+  }) async {
+    TdObject ft(String t) => {'@type': 'formattedText', 'text': t};
+    final res = await _td.send({
+      '@type': 'sendMessage',
+      'chat_id': chatId,
+      'input_message_content': {
+        '@type': 'inputMessagePoll',
+        'question': ft(question),
+        'options': [
+          for (final o in options) {'@type': 'inputPollOption', 'text': ft(o)},
+        ],
+        'is_anonymous': anonymous,
+        'allows_multiple_answers': multiple,
+        'allows_revoting': !quiz,
+        'type': quiz
+            ? {
+                '@type': 'inputPollTypeQuiz',
+                'correct_option_ids': [correct],
+              }
+            : {'@type': 'inputPollTypeRegular'},
+      },
+    });
+    _put(ChatMessage.fromJson(res));
+  }
+
+  Future<void> sendFile(String path, {String caption = ''}) async {
+    final ext = path.split('.').last.toLowerCase();
+    final file = {'@type': 'inputFileLocal', 'path': path};
+    final cap = await formatted(caption);
+    final content = switch (ext) {
+      'jpg' ||
+      'jpeg' ||
+      'png' ||
+      'webp' ||
+      'heic' => {'@type': 'inputMessagePhoto', 'photo': file, 'caption': cap},
+      'mp4' || 'mov' || 'mkv' || 'webm' => {
+        '@type': 'inputMessageVideo',
+        'video': file,
+        'caption': cap,
+        'supports_streaming': true,
+      },
+      'mp3' ||
+      'm4a' ||
+      'flac' ||
+      'wav' => {'@type': 'inputMessageAudio', 'audio': file, 'caption': cap},
+      _ => {'@type': 'inputMessageDocument', 'document': file, 'caption': cap},
+    };
+    final res = await _td.send({
+      '@type': 'sendMessage',
+      'chat_id': chatId,
+      'input_message_content': content,
+    });
+    _put(ChatMessage.fromJson(res));
+  }
+
+  ChatMessage? pinned;
+
+  Future<void> loadPinned() async {
+    try {
+      final res = await _td.send({
+        '@type': 'getChatPinnedMessage',
+        'chat_id': chatId,
+      });
+      pinned = res['@type'] == 'message' ? ChatMessage.fromJson(res) : null;
+    } on TdError {
+      pinned = null;
+    }
+    _emit();
+  }
+
+  Future<void> votePoll(int messageId, List<int> options) => _td.send({
+    '@type': 'setPollAnswer',
+    'chat_id': chatId,
+    'message_id': messageId,
+    'option_ids': options,
+  });
+
+  Future<void> sendDice(String emoji) async {
+    final res = await _td.send({
+      '@type': 'sendMessage',
+      'chat_id': chatId,
+      'input_message_content': {'@type': 'inputMessageDice', 'emoji': emoji},
+    });
+    _put(ChatMessage.fromJson(res));
+  }
+
+  /// Presses an inline callback button; returns the bot's answer.
+  Future<({String text, bool alert, String url})> pressCallback(
+    int messageId,
+    MarkupButton b,
+  ) async {
+    final res = await _td.send({
+      '@type': 'getCallbackQueryAnswer',
+      'chat_id': chatId,
+      'message_id': messageId,
+      'payload': {'@type': 'callbackQueryPayloadData', 'data': b.data},
+    });
+    return (
+      text: res['text'] as String? ?? '',
+      alert: res['show_alert'] == true,
+      url: res['url'] as String? ?? '',
+    );
+  }
+
+  /// Message whose reply keyboard is shown under the composer.
+  int replyMarkupMessageId = 0;
+  List<BotCommand> commands = const [];
+
+  ReplyKeyboard? get replyKeyboard {
+    final m = _byId[replyMarkupMessageId];
+    final k = m?.markup;
+    return k is ReplyKeyboard ? k : null;
+  }
+
+  Future<void> loadBotInfo({
+    int? botUserId,
+    int? supergroupId,
+    int? groupId,
+  }) async {
+    try {
+      final TdObject res;
+      if (botUserId != null) {
+        res = await _td.send({
+          '@type': 'getUserFullInfo',
+          'user_id': botUserId,
+        });
+        final info = res['bot_info'] as TdObject?;
+        commands = _cmds(info?['commands']);
+      } else if (supergroupId != null || groupId != null) {
+        res = await _td.send(
+          supergroupId != null
+              ? {
+                  '@type': 'getSupergroupFullInfo',
+                  'supergroup_id': supergroupId,
+                }
+              : {'@type': 'getBasicGroupFullInfo', 'basic_group_id': groupId},
+        );
+        commands = [
+          for (final b in (res['bot_commands'] as List? ?? const []))
+            ..._cmds((b as TdObject)['commands']),
+        ];
+      }
+    } on TdError {
+      commands = const [];
+    }
+    _emit();
+  }
+
+  Future<void> _loadCommands(TdObject? type) async {
+    switch (type?['@type']) {
+      case 'chatTypePrivate':
+        final uid = type!['user_id'] as int;
+        try {
+          final u = await _td.send({'@type': 'getUser', 'user_id': uid});
+          if ((u['type'] as TdObject?)?['@type'] == 'userTypeBot') {
+            await loadBotInfo(botUserId: uid);
+          }
+        } on TdError {
+          return;
+        }
+      case 'chatTypeSupergroup':
+        if (type!['is_channel'] == true) return;
+        await loadBotInfo(supergroupId: type['supergroup_id'] as int);
+      case 'chatTypeBasicGroup':
+        await loadBotInfo(groupId: type!['basic_group_id'] as int);
+    }
+  }
+
+  static List<BotCommand> _cmds(Object? list) => [
+    for (final c in (list as List? ?? const []))
+      if (c is TdObject)
+        BotCommand(
+          c['command'] as String? ?? '',
+          c['description'] as String? ?? '',
+        ),
+  ];
+
+  Future<void> pin(int messageId, {bool unpin = false}) => _td.send(
+    unpin
+        ? {
+            '@type': 'unpinChatMessage',
+            'chat_id': chatId,
+            'message_id': messageId,
+          }
+        : {
+            '@type': 'pinChatMessage',
+            'chat_id': chatId,
+            'message_id': messageId,
+            'disable_notification': false,
+            'only_for_self': false,
+          },
+  );
+
+  Future<void> forward(int toChatId, List<int> ids) => _td.send({
+    '@type': 'forwardMessages',
+    'chat_id': toChatId,
+    'from_chat_id': chatId,
+    'message_ids': ids,
+    'send_copy': false,
+    'remove_caption': false,
+  });
 
   Future<void> delete(List<int> ids, {required bool revoke}) => _td.send({
     '@type': 'deleteMessages',
@@ -258,7 +503,8 @@ class MessagesRepository {
 
   void _onUpdate(TdObject u) {
     if (u['chat_id'] != chatId &&
-        (u['message'] as TdObject?)?['chat_id'] != chatId) {
+        (u['message'] as TdObject?)?['chat_id'] != chatId &&
+        u['@type'] != 'updatePoll') {
       return;
     }
     switch (u['@type']) {
@@ -277,15 +523,46 @@ class MessagesRepository {
           media: MessageMedia.fromContent(content),
           spans: ChatMessage.spansOf(content),
           linkPreview: ChatMessage.linkPreviewOf(content),
+          formatted: ChatMessage.formattedOf(content),
         );
         _emit();
+      case 'updatePoll':
+        final poll = PollMedia.fromJson(u['poll'] as TdObject?);
+        if (poll == null) return;
+        for (final m in _byId.values.toList()) {
+          final media = m.media;
+          if (media is PollMedia && media.id == poll.id) {
+            _byId[m.id] = m.copyWith(content: m.content, media: poll);
+          }
+        }
+        _emit();
+      case 'updateChatReplyMarkup':
+        replyMarkupMessageId = u['reply_markup_message_id'] as int? ?? 0;
+        if (replyMarkupMessageId != 0 &&
+            !_byId.containsKey(replyMarkupMessageId)) {
+          unawaited(
+            _fetchReply(replyMarkupMessageId).then((_) {
+              final m = _replies[replyMarkupMessageId];
+              if (m != null) _put(m);
+            }),
+          );
+        }
+        _emit();
+      case 'updateMessageIsPinned':
+        unawaited(loadPinned());
+        final m = _byId[u['message_id']];
+        if (m == null) return;
+        _byId[m.id] = m.copyWith(isPinned: u['is_pinned'] == true);
       case 'updateMessageEdited':
         final id = u['message_id'] as int;
         final old = _byId[id];
         final edit = u['edit_date'] as int? ?? 0;
-        if (old == null || edit == 0) return;
+        if (old == null) return;
         _byId[id] = old.copyWith(
-          editDate: DateTime.fromMillisecondsSinceEpoch(edit * 1000),
+          editDate: edit == 0
+              ? null
+              : DateTime.fromMillisecondsSinceEpoch(edit * 1000),
+          markup: ReplyMarkup.fromJson(u['reply_markup'] as TdObject?),
         );
         _emit();
       case 'updateChatReadOutbox':

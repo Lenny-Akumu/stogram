@@ -35,7 +35,8 @@ void main() {
         },
       ],
     });
-    expect(spans, hasLength(4));
+    expect(spans, hasLength(5));
+    expect(spans[4].kind, SpanKind.spoiler);
     expect(spanTarget(text, spans[0]), 'https://example.com');
     expect(spanTarget(text, spans[1]), 'https://t.me/durov');
     expect(spanTarget(text, spans[2]), 'https://a.b/c');
@@ -68,5 +69,41 @@ void main() {
       'link_preview': {'url': 'https://y.ua'},
     });
     expect(empty, isNull);
+  });
+
+  test('blocks, commands and mention names are parsed', () {
+    final spans = parseEntities({
+      'text': 'x',
+      'entities': [
+        {
+          'offset': 0,
+          'length': 1,
+          'type': {'@type': 'textEntityTypePreCode', 'language': 'dart'},
+        },
+        {
+          'offset': 0,
+          'length': 1,
+          'type': {'@type': 'textEntityTypeExpandableBlockQuote'},
+        },
+        {
+          'offset': 0,
+          'length': 1,
+          'type': {'@type': 'textEntityTypeBotCommand'},
+        },
+        {
+          'offset': 0,
+          'length': 1,
+          'type': {'@type': 'textEntityTypeMentionName', 'user_id': 7},
+        },
+      ],
+    });
+    expect(spans.map((s) => s.kind), [
+      SpanKind.pre,
+      SpanKind.quote,
+      SpanKind.botCommand,
+      SpanKind.mentionName,
+    ]);
+    expect(spans[0].language, 'dart');
+    expect(spans[3].userId, 7);
   });
 }

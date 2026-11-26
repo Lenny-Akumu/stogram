@@ -11,14 +11,52 @@ enum SpanKind {
   code,
   strike,
   underline,
+  spoiler,
+  pre,
+  quote,
+  hashtag,
+  cashtag,
+  botCommand,
+  phone,
+  bankCard,
+  mentionName,
+}
+
+extension SpanKindX on SpanKind {
+  bool get isLink => switch (this) {
+    SpanKind.url ||
+    SpanKind.textUrl ||
+    SpanKind.email ||
+    SpanKind.mention ||
+    SpanKind.hashtag ||
+    SpanKind.cashtag ||
+    SpanKind.botCommand ||
+    SpanKind.phone ||
+    SpanKind.bankCard ||
+    SpanKind.mentionName => true,
+    _ => false,
+  };
+
+  bool get isBlock => this == SpanKind.pre || this == SpanKind.quote;
 }
 
 class TextSpanInfo {
-  const TextSpanInfo(this.offset, this.length, this.kind, {this.url = ''});
+  const TextSpanInfo(
+    this.offset,
+    this.length,
+    this.kind, {
+    this.url = '',
+    this.userId,
+    this.language = '',
+  });
 
   final int offset;
   final int length;
   final SpanKind kind;
+  final int? userId;
+  final String language;
+
+  int get end => offset + length;
 
   /// Target for links; for plain urls and mentions it is derived from text.
   final String url;
@@ -39,11 +77,19 @@ List<TextSpanInfo> parseEntities(TdObject? formatted) {
       'textEntityTypeMention' => SpanKind.mention,
       'textEntityTypeBold' => SpanKind.bold,
       'textEntityTypeItalic' => SpanKind.italic,
-      'textEntityTypeCode' ||
-      'textEntityTypePre' ||
-      'textEntityTypePreCode' => SpanKind.code,
+      'textEntityTypeCode' => SpanKind.code,
+      'textEntityTypePre' || 'textEntityTypePreCode' => SpanKind.pre,
+      'textEntityTypeBlockQuote' ||
+      'textEntityTypeExpandableBlockQuote' => SpanKind.quote,
       'textEntityTypeStrikethrough' => SpanKind.strike,
       'textEntityTypeUnderline' => SpanKind.underline,
+      'textEntityTypeSpoiler' => SpanKind.spoiler,
+      'textEntityTypeHashtag' => SpanKind.hashtag,
+      'textEntityTypeCashtag' => SpanKind.cashtag,
+      'textEntityTypeBotCommand' => SpanKind.botCommand,
+      'textEntityTypePhoneNumber' => SpanKind.phone,
+      'textEntityTypeBankCardNumber' => SpanKind.bankCard,
+      'textEntityTypeMentionName' => SpanKind.mentionName,
       _ => null,
     };
     if (kind == null || length <= 0) continue;
@@ -53,6 +99,8 @@ List<TextSpanInfo> parseEntities(TdObject? formatted) {
         length,
         kind,
         url: kind == SpanKind.textUrl ? (type?['url'] as String? ?? '') : '',
+        userId: type?['user_id'] as int?,
+        language: type?['language'] as String? ?? '',
       ),
     );
   }
@@ -66,6 +114,7 @@ String spanTarget(String text, TextSpanInfo s) {
     SpanKind.textUrl => s.url,
     SpanKind.email => 'mailto:$raw',
     SpanKind.mention => 'https://t.me/${raw.replaceFirst('@', '')}',
+    SpanKind.phone => 'tel:${raw.replaceAll(RegExp(r'[^0-9+]'), '')}',
     _ => raw.contains('://') ? raw : 'https://$raw',
   };
 }

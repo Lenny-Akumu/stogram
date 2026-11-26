@@ -1,6 +1,7 @@
 import '../../core/tdlib/td_dispatcher.dart';
 import '../chats/chat_summary.dart';
 import 'message_media.dart';
+import 'reply_markup.dart';
 import 'rich_text.dart';
 
 enum SendState { sent, pending, failed }
@@ -20,6 +21,11 @@ class ChatMessage {
     this.deletedAt,
     this.spans = const [],
     this.linkPreview,
+    this.formatted,
+    this.markup,
+    this.forward,
+    this.viaBotId,
+    this.isPinned = false,
   });
 
   factory ChatMessage.fromJson(TdObject json) {
@@ -48,6 +54,13 @@ class ChatMessage {
       media: MessageMedia.fromContent(json['content'] as TdObject),
       spans: spansOf(json['content'] as TdObject),
       linkPreview: linkPreviewOf(json['content'] as TdObject),
+      formatted: formattedOf(json['content'] as TdObject),
+      markup: ReplyMarkup.fromJson(json['reply_markup'] as TdObject?),
+      forward: ForwardOrigin.fromJson(json['forward_info'] as TdObject?),
+      viaBotId: json['via_bot_user_id'] == 0
+          ? null
+          : json['via_bot_user_id'] as int?,
+      isPinned: json['is_pinned'] == true,
     );
   }
 
@@ -70,6 +83,16 @@ class ChatMessage {
   final List<TextSpanInfo> spans;
   final LinkPreviewData? linkPreview;
 
+  /// Raw formattedText of the text or caption, kept for editing.
+  final TdObject? formatted;
+  final ReplyMarkup? markup;
+  final ForwardOrigin? forward;
+  final int? viaBotId;
+  final bool isPinned;
+
+  static TdObject? formattedOf(TdObject content) =>
+      (content['text'] ?? content['caption']) as TdObject?;
+
   static List<TextSpanInfo> spansOf(TdObject content) =>
       parseEntities((content['text'] ?? content['caption']) as TdObject?);
 
@@ -88,6 +111,9 @@ class ChatMessage {
     SendState? sendState,
     List<TextSpanInfo>? spans,
     LinkPreviewData? linkPreview,
+    TdObject? formatted,
+    ReplyMarkup? markup,
+    bool? isPinned,
   }) => ChatMessage(
     id: id,
     chatId: chatId,
@@ -102,6 +128,11 @@ class ChatMessage {
     deletedAt: deletedAt ?? this.deletedAt,
     spans: spans ?? this.spans,
     linkPreview: content == null ? this.linkPreview : linkPreview,
+    formatted: formatted ?? this.formatted,
+    markup: markup ?? this.markup,
+    forward: forward,
+    viaBotId: viaBotId,
+    isPinned: isPinned ?? this.isPinned,
   );
 
   static DateTime _time(Object? seconds) =>
@@ -115,6 +146,8 @@ class MessageActions {
     this.canCopy = false,
     this.canDeleteForSelf = false,
     this.canDeleteForAll = false,
+    this.canPin = false,
+    this.canForward = true,
   });
 
   factory MessageActions.fromJson(TdObject json) => MessageActions(
@@ -123,6 +156,8 @@ class MessageActions {
     canCopy: json['can_be_copied'] != false,
     canDeleteForSelf: json['can_be_deleted_only_for_self'] == true,
     canDeleteForAll: json['can_be_deleted_for_all_users'] == true,
+    canPin: json['can_be_pinned'] == true,
+    canForward: json['can_be_forwarded'] != false,
   );
 
   final bool canReply;
@@ -130,6 +165,37 @@ class MessageActions {
   final bool canCopy;
   final bool canDeleteForSelf;
   final bool canDeleteForAll;
+  final bool canPin;
+  final bool canForward;
 
   bool get canDelete => canDeleteForSelf || canDeleteForAll;
+}
+
+class ForwardOrigin {
+  const ForwardOrigin({this.userId, this.chatId, this.name = ''});
+
+  static ForwardOrigin? fromJson(TdObject? info) {
+    final o = info?['origin'] as TdObject?;
+    return switch (o?['@type']) {
+      'messageOriginUser' => ForwardOrigin(
+        userId: o!['sender_user_id'] as int?,
+      ),
+      'messageOriginHiddenUser' => ForwardOrigin(
+        name: o!['sender_name'] as String? ?? '',
+      ),
+      'messageOriginChat' => ForwardOrigin(
+        chatId: o!['sender_chat_id'] as int?,
+        name: o['author_signature'] as String? ?? '',
+      ),
+      'messageOriginChannel' => ForwardOrigin(
+        chatId: o!['chat_id'] as int?,
+        name: o['author_signature'] as String? ?? '',
+      ),
+      _ => null,
+    };
+  }
+
+  final int? userId;
+  final int? chatId;
+  final String name;
 }
