@@ -1,6 +1,7 @@
 import '../../core/tdlib/td_dispatcher.dart';
 import '../chats/chat_summary.dart';
 import 'message_media.dart';
+import 'rich_text.dart';
 
 enum SendState { sent, pending, failed }
 
@@ -17,6 +18,8 @@ class ChatMessage {
     this.replyToId,
     this.media,
     this.deletedAt,
+    this.spans = const [],
+    this.linkPreview,
   });
 
   factory ChatMessage.fromJson(TdObject json) {
@@ -43,6 +46,8 @@ class ChatMessage {
       },
       replyToId: sameChatReply ? reply!['message_id'] as int? : null,
       media: MessageMedia.fromContent(json['content'] as TdObject),
+      spans: spansOf(json['content'] as TdObject),
+      linkPreview: linkPreviewOf(json['content'] as TdObject),
     );
   }
 
@@ -62,6 +67,17 @@ class ChatMessage {
 
   bool get isDeleted => deletedAt != null;
 
+  final List<TextSpanInfo> spans;
+  final LinkPreviewData? linkPreview;
+
+  static List<TextSpanInfo> spansOf(TdObject content) =>
+      parseEntities((content['text'] ?? content['caption']) as TdObject?);
+
+  static LinkPreviewData? linkPreviewOf(TdObject content) {
+    final p = LinkPreviewData.fromJson(content['link_preview'] as TdObject?);
+    return p == null || p.isEmpty ? null : p;
+  }
+
   bool get isEdited => editDate != null;
 
   ChatMessage copyWith({
@@ -70,6 +86,8 @@ class ChatMessage {
     DateTime? editDate,
     DateTime? deletedAt,
     SendState? sendState,
+    List<TextSpanInfo>? spans,
+    LinkPreviewData? linkPreview,
   }) => ChatMessage(
     id: id,
     chatId: chatId,
@@ -82,6 +100,8 @@ class ChatMessage {
     replyToId: replyToId,
     media: content == null ? this.media : media,
     deletedAt: deletedAt ?? this.deletedAt,
+    spans: spans ?? this.spans,
+    linkPreview: content == null ? this.linkPreview : linkPreview,
   );
 
   static DateTime _time(Object? seconds) =>

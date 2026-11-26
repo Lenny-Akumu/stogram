@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -127,6 +128,7 @@ mixin _Playable<T extends ConsumerStatefulWidget> on ConsumerState<T> {
 
   int? get playFileId;
   TdObject? get playSeed;
+  String get playLabel;
 
   Future<void> play() async {
     if (loading) return;
@@ -134,7 +136,9 @@ mixin _Playable<T extends ConsumerStatefulWidget> on ConsumerState<T> {
     try {
       final f = await _fetch(ref, playFileId, playSeed);
       if (f != null && mounted) {
-        await ref.read(audioPlaybackProvider.notifier).toggle(f.id, f.path);
+        await ref
+            .read(audioPlaybackProvider.notifier)
+            .toggle(f.id, f.path, label: playLabel);
       }
     } finally {
       if (mounted) setState(() => loading = false);
@@ -158,6 +162,8 @@ class _VoiceTileState extends ConsumerState<_VoiceTile>
   int? get playFileId => widget.media.fileId;
   @override
   TdObject? get playSeed => widget.media.file;
+  @override
+  String get playLabel => context.l10n.previewVoice;
 
   @override
   Widget build(BuildContext context) {
@@ -288,6 +294,8 @@ class _AudioTileState extends ConsumerState<_AudioTile>
   int? get playFileId => widget.media.fileId;
   @override
   TdObject? get playSeed => widget.media.file;
+  @override
+  String get playLabel => widget.media.title;
 
   @override
   Widget build(BuildContext context) {
@@ -553,12 +561,25 @@ class _RoundVideoState extends ConsumerState<_RoundVideo> {
     super.dispose();
   }
 
+  void _seekAt(Offset local, double size) {
+    final p = _player;
+    if (p == null) return;
+    final d = local - Offset(size / 2, size / 2);
+    var angle = math.atan2(d.dx, -d.dy);
+    if (angle < 0) angle += 2 * math.pi;
+    final fraction = angle / (2 * math.pi);
+    unawaited(p.seek(p.state.duration * fraction));
+    setState(() => _progress = fraction);
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = _controller;
     const size = 220.0;
     return GestureDetector(
       onTap: _toggle,
+      onPanStart: (d) => _seekAt(d.localPosition, size),
+      onPanUpdate: (d) => _seekAt(d.localPosition, size),
       child: SizedBox.square(
         dimension: size,
         child: Stack(

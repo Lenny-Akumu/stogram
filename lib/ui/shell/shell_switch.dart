@@ -14,7 +14,7 @@ class ShellSwitch extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return switch (ref.watch(skinProvider).layout) {
+    return switch (ref.watch(effectiveLayoutProvider)) {
       SkinLayout.edge => EdgeShell(chatId: chatId),
       SkinLayout.classic => ClassicShell(chatId: chatId),
     };

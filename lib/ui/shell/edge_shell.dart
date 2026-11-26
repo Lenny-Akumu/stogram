@@ -11,6 +11,7 @@ import '../../core/ayu/ayu_settings.dart';
 import '../../core/l10n/l10n.dart';
 import '../../data/chats/chat_summary.dart';
 import '../../features/chat/chat_screen.dart';
+import '../components/avatar.dart';
 import '../components/presence_text.dart';
 import '../theme/chat_colors.dart';
 
@@ -52,7 +53,19 @@ class _EdgeShellState extends ConsumerState<EdgeShell> {
   }
 
   void _set(_Side s) {
-    if (_open != s) setState(() => _open = s);
+    if (_open == s) return;
+    setState(() => _open = s);
+    if (s == _Side.right) {
+      final chats = ref.read(chatsProvider).value ?? const <ChatSummary>[];
+      final userId = chats
+          .where((c) => c.id == widget.chatId)
+          .firstOrNull
+          ?.peer
+          .userId;
+      if (userId != null) {
+        unawaited(ref.read(usersRepositoryProvider).loadFullInfo(userId));
+      }
+    }
   }
 
   void _openChat(int id) {
@@ -394,6 +407,10 @@ class _ToolPanel extends ConsumerWidget {
     final ayu = ref.watch(ayuSettingsProvider);
     final n = ref.read(ayuSettingsProvider.notifier);
     final c = chat;
+    final userId = c?.peer.userId;
+    final user = userId == null
+        ? null
+        : ref.read(usersRepositoryProvider).user(userId);
     final sub = c == null
         ? ''
         : chatSubtitle(
@@ -454,6 +471,16 @@ class _ToolPanel extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(20, 24, 24, 24),
           children: [
             if (c != null) ...[
+              Align(
+                alignment: Alignment.centerRight,
+                child: Avatar(
+                  id: c.id,
+                  title: c.title,
+                  photo: c.photo,
+                  size: 96,
+                ),
+              ),
+              const SizedBox(height: 16),
               Text(
                 c.title.toUpperCase(),
                 textAlign: TextAlign.right,
@@ -472,6 +499,44 @@ class _ToolPanel extends ConsumerWidget {
                 textAlign: TextAlign.right,
                 style: TextStyle(color: colors.secondary),
               ),
+              if (user != null) ...[
+                const SizedBox(height: 16),
+                for (final (label, value) in [
+                  (
+                    l10n.profileUsername,
+                    user.username.isEmpty ? '' : '@${user.username}',
+                  ),
+                  (
+                    l10n.authPhoneLabel,
+                    user.phone.isEmpty ? '' : '+${user.phone}',
+                  ),
+                  (l10n.profileBio, user.bio),
+                ])
+                  if (value.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          SelectableText(
+                            value,
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              color: colors.textIn,
+                              fontSize: 15,
+                            ),
+                          ),
+                          Text(
+                            label,
+                            style: TextStyle(
+                              color: colors.secondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+              ],
               const SizedBox(height: 28),
             ],
             Text(

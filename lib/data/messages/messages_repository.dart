@@ -238,6 +238,8 @@ class MessagesRepository {
         _byId[id] = old.copyWith(
           content: MessagePreview.fromContent(content),
           media: MessageMedia.fromContent(content),
+          spans: ChatMessage.spansOf(content),
+          linkPreview: ChatMessage.linkPreviewOf(content),
         );
         _emit();
       case 'updateMessageEdited':

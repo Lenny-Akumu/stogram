@@ -14,8 +14,10 @@ import '../../data/messages/chat_message.dart';
 import '../../data/messages/message_media.dart';
 import '../../data/messages/messages_repository.dart';
 import '../../ui/components/avatar.dart';
+import '../../ui/components/audio_bar.dart';
 import '../../ui/components/presence_text.dart';
 import '../../ui/components/preview_text.dart';
+import '../../ui/components/rich_message_text.dart';
 import '../../ui/theme/chat_colors.dart';
 import '../../ui/theme/skin_provider.dart';
 import 'media_view.dart';
@@ -310,6 +312,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       body: Column(
         children: [
+          const AudioBar(),
           Expanded(
             child: Stack(
               children: [
@@ -669,10 +672,19 @@ class _Bubble extends ConsumerWidget {
             crossAxisAlignment: WrapCrossAlignment.end,
             spacing: 8,
             children: [
-              Text(
-                text,
+              RichMessageText(
+                text: text,
+                spans: message.spans,
                 style: TextStyle(color: fg, fontSize: 15, height: 1.3),
+                linkColor: out ? fg : colors.accent,
               ),
+              if (message.linkPreview != null)
+                LinkPreviewCard(
+                  preview: message.linkPreview!,
+                  accent: out ? fg : colors.accent,
+                  textColor: fg,
+                  maxWidth: maxWidth - 20,
+                ),
               footer,
             ],
           )
