@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import 'package:intl/intl.dart';
 
 import '../../app/providers.dart';
 import '../../core/l10n/l10n.dart';
+import '../../core/notify/notifier.dart';
 import '../../core/settings/app_prefs.dart';
 import '../../core/tdlib/td_error.dart';
 import '../../data/chats/chat_summary.dart';
@@ -51,6 +53,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   ChatMessage? _target;
   bool _showDown = false;
   bool _keyboardOpen = true;
+  bool _searching = false;
+  final _searchCtl = TextEditingController();
+  List<ChatMessage> _results = const [];
+  Timer? _searchDebounce;
+  int? _highlight;
+  final _keys = <int, GlobalKey>{};
   bool _commandsOpen = false;
 
   @override
@@ -67,6 +75,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Future<void> _open() async {
     try {
+      unawaited(ref.read(messageNotifierProvider).clear(widget.chatId));
       await _repo.open();
       await _repo.markRead();
     } on TdError {
@@ -80,6 +89,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     unawaited(_repo.close().catchError((Object _) {}));
     _keep.close();
     _scroll.dispose();
+    _searchCtl.dispose();
+    _searchDebounce?.cancel();
     _input.dispose();
     _inputFocus.dispose();
     super.dispose();
@@ -94,17 +105,75 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         }),
       );
     }
+    if (pos.pixels < 300 && _repo.detached) {
+      unawaited(
+        _repo.loadNewer().then((_) {
+          if (mounted) setState(() {});
+        }),
+      );
+    }
     final down = pos.pixels > 400;
     if (down != _showDown) setState(() => _showDown = down);
   }
 
-  void _scrollDown() => unawaited(
-    _scroll.animateTo(
-      0,
-      duration: const Duration(milliseconds: 240),
-      curve: Curves.easeOutCubic,
-    ),
-  );
+  void _scrollDown() {
+    if (_repo.detached) {
+      unawaited(
+        _repo.returnToLatest().then((_) {
+          if (mounted) setState(() {});
+        }),
+      );
+      return;
+    }
+    unawaited(
+      _scroll.animateTo(
+        0,
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+      ),
+    );
+  }
+
+  GlobalKey _keyFor(int id) => _keys.putIfAbsent(id, GlobalKey.new);
+
+  Future<void> _jump(int id) async {
+    await _guard(() => _repo.jumpTo(id));
+    if (!mounted) return;
+    setState(() => _highlight = id);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _keys[id]?.currentContext;
+      if (ctx != null && ctx.mounted) {
+        unawaited(
+          Scrollable.ensureVisible(
+            ctx,
+            alignment: 0.5,
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeOutCubic,
+          ),
+        );
+      }
+    });
+    Timer(const Duration(milliseconds: 1600), () {
+      if (mounted && _highlight == id) setState(() => _highlight = null);
+    });
+  }
+
+  void _searchChanged(String v) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () async {
+      final q = v.trim();
+      final found = q.isEmpty ? const <ChatMessage>[] : await _repo.search(q);
+      if (mounted && _searchCtl.text.trim() == q) {
+        setState(() => _results = found);
+      }
+    });
+  }
+
+  void _toggleSearch() => setState(() {
+    _searching = !_searching;
+    _searchCtl.clear();
+    _results = const [];
+  });
 
   void _onMessages(List<ChatMessage> list) {
     final newest = list.isEmpty ? null : list.first;
@@ -140,6 +209,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final mode = _mode;
     final target = _target;
     _setMode(_Mode.send);
+    if (_repo.detached) await _repo.returnToLatest();
     try {
       switch (mode) {
         case _Mode.send:
@@ -536,7 +606,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: !widget.embedded,
         titleSpacing: widget.embedded ? 16 : 0,
-        title: _Header(chat: chat),
+        title: _searching
+            ? TextField(
+                controller: _searchCtl,
+                autofocus: true,
+                onChanged: _searchChanged,
+                decoration: InputDecoration(
+                  hintText: l10n.searchInChat,
+                  border: InputBorder.none,
+                ),
+              )
+            : _Header(chat: chat),
+        actions: [
+          IconButton(
+            tooltip: l10n.searchInChat,
+            icon: Icon(_searching ? Icons.close : Icons.search),
+            onPressed: _toggleSearch,
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -559,6 +646,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ListView.builder(
                     controller: _scroll,
                     reverse: true,
+                    scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
                     padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                     itemCount: messages.length,
                     itemBuilder: (context, i) {
@@ -593,8 +681,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         },
                         onActions: () => _showActions(m),
                         onEdits: () => _showEdits(m),
+                        onJump: _jump,
                       );
-                      if (!newDay) return bubble;
+                      final keyed = AnimatedContainer(
+                        key: _keyFor(m.id),
+                        duration: const Duration(milliseconds: 300),
+                        color: _highlight == m.id
+                            ? colors.accent.withValues(alpha: 0.18)
+                            : Colors.transparent,
+                        child: bubble,
+                      );
+                      if (!newDay) return keyed;
                       return Column(
                         children: [
                           Padding(
@@ -603,16 +700,52 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               text: dayLabel(l10n, m.date, now, locale),
                             ),
                           ),
-                          bubble,
+                          keyed,
                         ],
                       );
                     },
+                  ),
+                if (_searching && _results.isNotEmpty)
+                  Positioned.fill(
+                    child: Material(
+                      color: colors.panel,
+                      child: ListView(
+                        children: [
+                          for (final r in _results)
+                            ListTile(
+                              title: Text(
+                                previewText(context, r.content),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                [
+                                  if (r.senderUserId != null)
+                                    ref
+                                            .read(usersRepositoryProvider)
+                                            .nameOf(r.senderUserId!) ??
+                                        '',
+                                  DateFormat(
+                                    'dd.MM.yy HH:mm',
+                                    locale,
+                                  ).format(r.date),
+                                ].where((e) => e.isNotEmpty).join(' · '),
+                                style: TextStyle(color: colors.secondary),
+                              ),
+                              onTap: () {
+                                _toggleSearch();
+                                unawaited(_jump(r.id));
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 Positioned(
                   right: 16,
                   bottom: 12,
                   child: AnimatedScale(
-                    scale: _showDown ? 1 : 0,
+                    scale: _showDown || _repo.detached ? 1 : 0,
                     duration: const Duration(milliseconds: 180),
                     curve: Curves.easeOutCubic,
                     child: FloatingActionButton.small(
@@ -763,6 +896,7 @@ class _Bubble extends ConsumerWidget {
     required this.repo,
     required this.onEntity,
     required this.onSwitchInline,
+    required this.onJump,
     this.replied,
     this.isRead = false,
   });
@@ -770,6 +904,7 @@ class _Bubble extends ConsumerWidget {
   final MessagesRepository repo;
   final EntityTap onEntity;
   final ValueChanged<String> onSwitchInline;
+  final ValueChanged<int> onJump;
   final ChatMessage message;
   final bool showSender;
   final bool showAvatar;
@@ -912,38 +1047,41 @@ class _Bubble extends ConsumerWidget {
             ),
           ),
         if (reply != null)
-          Container(
-            margin: const EdgeInsets.only(bottom: 4),
-            padding: const EdgeInsets.fromLTRB(8, 2, 8, 2),
-            decoration: BoxDecoration(
-              color: (out ? Colors.white : colors.accent).withValues(
-                alpha: 0.1,
-              ),
-              borderRadius: BorderRadius.circular(4),
-              border: Border(
-                left: BorderSide(color: out ? fg : colors.accent, width: 3),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (reply.senderUserId != null)
-                  Text(
-                    users.nameOf(reply.senderUserId!) ?? '',
-                    maxLines: 1,
-                    style: TextStyle(
-                      color: out ? fg : colors.accent,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                Text(
-                  previewText(context, reply.content),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: fg, fontSize: 13),
+          GestureDetector(
+            onTap: () => onJump(reply.id),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.fromLTRB(8, 2, 8, 2),
+              decoration: BoxDecoration(
+                color: (out ? Colors.white : colors.accent).withValues(
+                  alpha: 0.1,
                 ),
-              ],
+                borderRadius: BorderRadius.circular(4),
+                border: Border(
+                  left: BorderSide(color: out ? fg : colors.accent, width: 3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (reply.senderUserId != null)
+                    Text(
+                      users.nameOf(reply.senderUserId!) ?? '',
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: out ? fg : colors.accent,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  Text(
+                    previewText(context, reply.content),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: fg, fontSize: 13),
+                  ),
+                ],
+              ),
             ),
           ),
         if (media != null)

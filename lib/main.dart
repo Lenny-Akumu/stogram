@@ -8,6 +8,7 @@ import 'app/providers.dart';
 import 'core/ayu/ayu_settings.dart';
 import 'core/config.dart';
 import 'core/db/app_db.dart';
+import 'core/notify/notifier.dart';
 import 'core/tdlib/td_client.dart';
 
 Future<void> main() async {
@@ -27,6 +28,7 @@ Future<void> main() async {
         tdApiProvider.overrideWithValue(td),
         sharedPrefsProvider.overrideWithValue(prefs),
         appDbProvider.overrideWithValue(AppDb()),
+        nativeNotificationsProvider.overrideWithValue(true),
       ],
       child: const App(),
     ),
