@@ -139,6 +139,19 @@ class UsersRepository {
     }
   }
 
+  Future<void> load(int userId) async {
+    if (_users.containsKey(userId)) return;
+    try {
+      final u = TgUser.fromJson(
+        await _td.send({'@type': 'getUser', 'user_id': userId}),
+      );
+      _users[u.id] = u;
+      _changes.add(null);
+    } on TdError {
+      // unknown user
+    }
+  }
+
   Future<void> loadFullInfo(int userId) async {
     try {
       final full = await _td.send({

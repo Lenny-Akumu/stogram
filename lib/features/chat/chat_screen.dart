@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 
 import '../../app/providers.dart';
 import '../../core/l10n/l10n.dart';
+import '../../core/settings/app_prefs.dart';
 import '../../core/tdlib/td_error.dart';
 import '../../data/chats/chat_summary.dart';
 import '../../data/messages/chat_message.dart';
@@ -161,6 +162,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Future<void> _showActions(ChatMessage m) async {
     final l10n = context.l10n;
     final actions = await _repo.actions(m.id);
+    final reactions = await _repo.availableReactions(m.id);
     if (!mounted) return;
     final choice = await showModalBottomSheet<String>(
       context: context,
@@ -169,6 +171,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (reactions.isNotEmpty)
+              SizedBox(
+                height: 52,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  children: [
+                    for (final e in reactions)
+                      InkWell(
+                        borderRadius: BorderRadius.circular(24),
+                        onTap: () => Navigator.pop(context, 'react:$e'),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Text(e, style: const TextStyle(fontSize: 28)),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             if (actions.canReply)
               ListTile(
                 leading: const Icon(Icons.reply),
@@ -229,6 +250,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         await _guard(() => _repo.pin(m.id, unpin: m.isPinned));
       case 'forward':
         await _forward(m);
+      case final String r when r.startsWith('react:'):
+        await _guard(() => _repo.toggleReaction(m, r.substring(6)));
     }
   }
 
@@ -633,6 +656,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             keyboardOpen: _keyboardOpen,
             onKeyboard: () => setState(() => _keyboardOpen = !_keyboardOpen),
             hint: _repo.replyKeyboard?.placeholder,
+            sendWithEnter: ref.watch(appPrefsProvider).sendWithEnter,
           ),
           if (_repo.replyKeyboard case final k? when _keyboardOpen)
             ReplyKeyboardView(keyboard: k, onPress: _pressReply),
@@ -964,6 +988,47 @@ class _Bubble extends ConsumerWidget {
           )
         else
           Align(alignment: Alignment.bottomRight, child: footer),
+        if (message.reactions.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 2),
+            child: Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: [
+                for (final r in message.reactions)
+                  GestureDetector(
+                    onTap: () => unawaited(
+                      repo
+                          .toggleReaction(message, r.emoji)
+                          .catchError((Object _) {}),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: r.chosen
+                            ? (out ? fg : colors.accent)
+                            : (out ? fg : colors.accent).withValues(
+                                alpha: 0.15,
+                              ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${r.emoji} ${r.count}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: r.chosen
+                              ? (out ? colors.bubbleOut : colors.bubbleIn)
+                              : fg,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
       ],
     );
 
@@ -1242,8 +1307,10 @@ class _Composer extends StatelessWidget {
     this.hasKeyboard = false,
     this.keyboardOpen = false,
     this.hint,
+    this.sendWithEnter = true,
   });
 
+  final bool sendWithEnter;
   final TextEditingController controller;
   final FocusNode focusNode;
   final Future<void> Function() onSend;
@@ -1329,8 +1396,13 @@ class _Composer extends StatelessWidget {
               Expanded(
                 child: CallbackShortcuts(
                   bindings: {
-                    if (_isDesktop)
+                    if (_isDesktop && sendWithEnter)
                       const SingleActivator(LogicalKeyboardKey.enter): onSend,
+                    if (_isDesktop && !sendWithEnter)
+                      const SingleActivator(
+                        LogicalKeyboardKey.enter,
+                        control: true,
+                      ): onSend,
                     const SingleActivator(
                       LogicalKeyboardKey.keyB,
                       control: true,
