@@ -273,5 +273,16 @@
   "languageSystem": "System",
   "settingsTextSize": "Text size",
   "settingsSendWithEnter": "Send with Enter",
-  "settingsSendWithEnterHint": "Otherwise Ctrl+Enter, Enter adds a line"
+  "settingsSendWithEnterHint": "Otherwise Ctrl+Enter, Enter adds a line",
+  "chatMute": "Mute",
+  "chatUnmute": "Unmute",
+  "chatMarkRead": "Mark as read",
+  "chatMarkUnread": "Mark as unread",
+  "chatArchive": "Archive",
+  "chatUnarchive": "Unarchive",
+  "chatDelete": "Delete chat",
+  "chatLeave": "Leave and delete",
+  "chatDeleteAsk": "Delete «{title}»?",
+  "folderAll": "All chats",
+  "archiveTitle": "Archive"
 }

@@ -13,6 +13,7 @@ import '../../ui/components/preview_text.dart';
 import '../../ui/components/presence_text.dart';
 import '../../ui/theme/chat_colors.dart';
 import 'app_drawer.dart';
+import 'chat_list_extras.dart';
 
 class ChatListPane extends ConsumerStatefulWidget {
   const ChatListPane({super.key, required this.onOpen, this.selectedId});
@@ -28,6 +29,12 @@ class _ChatListPaneState extends ConsumerState<ChatListPane> {
   final _scroll = ScrollController();
   final _search = TextEditingController();
   String _query = '';
+  String _list = 'main';
+
+  void _pick(String key) {
+    setState(() => _list = key);
+    unawaited(_loadMore());
+  }
 
   @override
   void initState() {
@@ -50,7 +57,7 @@ class _ChatListPaneState extends ConsumerState<ChatListPane> {
 
   Future<void> _loadMore() async {
     try {
-      await ref.read(chatsRepositoryProvider).loadMore();
+      await ref.read(chatsRepositoryProvider).loadMore(list: _list);
       if (mounted) setState(() {});
     } catch (_) {
       if (!mounted) return;
@@ -64,25 +71,32 @@ class _ChatListPaneState extends ConsumerState<ChatListPane> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = ChatColors.of(context);
-    final all = ref.watch(chatsProvider).value ?? const <ChatSummary>[];
+    final all = ref.watch(chatListProvider(_list));
     ref.watch(usersChangedProvider);
     final q = _query.trim().toLowerCase();
     final chats = q.isEmpty
         ? all
         : all.where((c) => c.title.toLowerCase().contains(q)).toList();
-    final allLoaded = ref.watch(chatsRepositoryProvider).allLoaded;
+    final repo = ref.watch(chatsRepositoryProvider);
+    final allLoaded = repo.loadedAll(_list);
+    final showArchive = _list == 'main' && q.isEmpty;
 
     return Scaffold(
       backgroundColor: colors.panel,
       drawer: const AppDrawer(),
       appBar: AppBar(
         titleSpacing: 0,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
+        leading: _list == 'archive'
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => _pick('main'),
+              )
+            : Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
         title: SizedBox(
           height: 38,
           child: TextField(
@@ -106,8 +120,21 @@ class _ChatListPaneState extends ConsumerState<ChatListPane> {
       body: Column(
         children: [
           const AudioBar(),
+          if (_list != 'archive')
+            FolderTabs(current: _list, onPick: _pick)
+          else
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Text(
+                l10n.archiveTitle,
+                style: TextStyle(
+                  color: colors.accent,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           Expanded(
-            child: chats.isEmpty
+            child: chats.isEmpty && !showArchive
                 ? Center(
                     child: allLoaded || q.isNotEmpty
                         ? Text(l10n.chatsEmpty)
@@ -115,13 +142,24 @@ class _ChatListPaneState extends ConsumerState<ChatListPane> {
                   )
                 : ListView.builder(
                     controller: _scroll,
-                    itemCount: chats.length,
-                    itemExtent: 72,
-                    itemBuilder: (context, i) => ChatTile(
-                      chat: chats[i],
-                      selected: chats[i].id == widget.selectedId,
-                      onTap: () => widget.onOpen(chats[i].id),
-                    ),
+                    itemCount: chats.length + (showArchive ? 1 : 0),
+                    itemBuilder: (context, i) {
+                      if (showArchive && i == 0) {
+                        return ArchiveRow(onTap: () => _pick('archive'));
+                      }
+                      final c = chats[i - (showArchive ? 1 : 0)];
+                      return SizedBox(
+                        height: 72,
+                        child: ChatTile(
+                          chat: c,
+                          selected: c.id == widget.selectedId,
+                          onTap: () => widget.onOpen(c.id),
+                          onMenu: () => unawaited(
+                            showChatActions(context, ref, c, _list),
+                          ),
+                        ),
+                      );
+                    },
                   ),
           ),
         ],
@@ -136,11 +174,13 @@ class ChatTile extends ConsumerWidget {
     required this.chat,
     required this.onTap,
     this.selected = false,
+    this.onMenu,
   });
 
   final ChatSummary chat;
   final VoidCallback onTap;
   final bool selected;
+  final VoidCallback? onMenu;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -165,6 +205,8 @@ class ChatTile extends ConsumerWidget {
       color: selected ? colors.selected : Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onMenu,
+        onSecondaryTap: onMenu,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
           child: Row(
@@ -212,7 +254,7 @@ class ChatTile extends ConsumerWidget {
                               color: fg,
                             ),
                           ),
-                        Expanded(
+                        Flexible(
                           child: Text(
                             chat.title.isEmpty ? l10n.chatUntitled : chat.title,
                             maxLines: 1,
@@ -224,6 +266,12 @@ class ChatTile extends ConsumerWidget {
                             ),
                           ),
                         ),
+                        if (chat.isMuted)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4),
+                            child: Icon(Icons.volume_off, size: 14, color: sub),
+                          ),
+                        const Spacer(),
                         if (date != null)
                           Text(
                             formatChatDate(date, DateTime.now(), locale),
@@ -249,10 +297,22 @@ class ChatTile extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        if (chat.unreadCount > 0)
+                        if (chat.unreadMentions > 0)
+                          _Badge(
+                            count: -1,
+                            color: selected ? Colors.white : colors.accent,
+                            textColor: selected
+                                ? colors.selected
+                                : Colors.white,
+                          ),
+                        if (chat.unreadCount > 0 || chat.markedUnread)
                           _Badge(
                             count: chat.unreadCount,
-                            color: selected ? Colors.white : colors.unread,
+                            color: selected
+                                ? Colors.white
+                                : chat.isMuted
+                                ? colors.secondary
+                                : colors.unread,
                             textColor: selected
                                 ? colors.selected
                                 : Colors.white,
@@ -296,7 +356,13 @@ class _Badge extends StatelessWidget {
         borderRadius: BorderRadius.circular(11),
       ),
       child: Text(
-        count > 9999 ? '9999+' : '$count',
+        count < 0
+            ? '@'
+            : count == 0
+            ? ''
+            : count > 9999
+            ? '9999+'
+            : '$count',
         style: TextStyle(
           color: textColor,
           fontSize: 12,

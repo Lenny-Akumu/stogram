@@ -596,5 +596,23 @@
   "languageSystem": "Як у системі",
   "settingsTextSize": "Розмір тексту",
   "settingsSendWithEnter": "Надсилати по Enter",
-  "settingsSendWithEnterHint": "Інакше Ctrl+Enter, а Enter — новий рядок"
+  "settingsSendWithEnterHint": "Інакше Ctrl+Enter, а Enter — новий рядок",
+  "chatMute": "Вимкнути звук",
+  "chatUnmute": "Увімкнути звук",
+  "chatMarkRead": "Позначити прочитаним",
+  "chatMarkUnread": "Позначити непрочитаним",
+  "chatArchive": "В архів",
+  "chatUnarchive": "З архіву",
+  "chatDelete": "Видалити чат",
+  "chatLeave": "Вийти й видалити",
+  "chatDeleteAsk": "Видалити «{title}»?",
+  "folderAll": "Усі чати",
+  "archiveTitle": "Архів",
+  "@chatDeleteAsk": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  }
 }

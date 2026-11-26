@@ -10,6 +10,7 @@ import '../../core/l10n/l10n.dart';
 import '../../data/chats/chat_summary.dart';
 import '../../data/chats/chats_repository.dart';
 import '../../data/stickers/stickers_repository.dart';
+import '../../features/chat_list/chat_list_extras.dart';
 import '../../features/chat_list/chat_list_screen.dart';
 import '../components/avatar.dart';
 import '../components/presence_text.dart';
@@ -124,12 +125,20 @@ class _ChatsPanel extends ConsumerStatefulWidget {
 
 class _ChatsPanelState extends ConsumerState<_ChatsPanel> {
   String _query = '';
+  String _list = 'main';
+
+  void _pick(String key) {
+    setState(() => _list = key);
+    unawaited(
+      ref.read(chatsRepositoryProvider).loadMore(list: key).catchError((_) {}),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = ChatColors.of(context);
     ref.watch(usersChangedProvider);
-    final all = ref.watch(chatsProvider).value ?? const <ChatSummary>[];
+    final all = ref.watch(chatListProvider(_list));
     final q = _query.trim().toLowerCase();
     final chats = q.isEmpty
         ? all
@@ -156,15 +165,35 @@ class _ChatsPanelState extends ConsumerState<_ChatsPanel> {
             ),
           ),
         ),
+        if (_list == 'archive')
+          ListTile(
+            dense: true,
+            leading: const Icon(Icons.arrow_back),
+            title: Text(context.l10n.archiveTitle),
+            onTap: () => _pick('main'),
+          )
+        else
+          FolderTabs(current: _list, onPick: _pick),
         Expanded(
           child: ListView.builder(
-            itemCount: chats.length,
-            itemExtent: 72,
-            itemBuilder: (context, i) => ChatTile(
-              chat: chats[i],
-              selected: chats[i].id == widget.selected,
-              onTap: () => widget.onOpen(chats[i].id),
-            ),
+            itemCount: chats.length + (_list == 'main' && q.isEmpty ? 1 : 0),
+            itemBuilder: (context, i) {
+              final archive = _list == 'main' && q.isEmpty;
+              if (archive && i == 0) {
+                return ArchiveRow(onTap: () => _pick('archive'));
+              }
+              final c = chats[i - (archive ? 1 : 0)];
+              return SizedBox(
+                height: 72,
+                child: ChatTile(
+                  chat: c,
+                  selected: c.id == widget.selected,
+                  onTap: () => widget.onOpen(c.id),
+                  onMenu: () =>
+                      unawaited(showChatActions(context, ref, c, _list)),
+                ),
+              );
+            },
           ),
         ),
       ],
