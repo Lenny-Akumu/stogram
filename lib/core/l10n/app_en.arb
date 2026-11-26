@@ -286,5 +286,6 @@
   "folderAll": "All chats",
   "archiveTitle": "Archive",
   "notifDevice": "Notifications on this device",
-  "notifDeviceHint": "Show system notifications for new messages"
+  "notifDeviceHint": "Show system notifications for new messages",
+  "searchInChat": "Search in chat"
 }

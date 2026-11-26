@@ -358,4 +358,25 @@ void main() {
       ButtonKind.callback,
     ]);
   });
+
+  test('jump loads around a message and returns to latest', () async {
+    td.push({'@type': 'updateNewMessage', 'message': _msg(100)});
+    td.handler = (r) => switch (r['@type']) {
+      'getChatHistory' when r['offset'] == -20 => {
+        'messages': [_msg(52), _msg(51), _msg(50)],
+      },
+      'getChatHistory' when r['offset'] == -40 => {
+        'messages': [_msg(52)],
+      },
+      'getChatHistory' => {'messages': <Object>[]},
+      _ => {'@type': 'ok'},
+    };
+    await repo.jumpTo(51);
+    expect(repo.detached, isTrue);
+    expect(repo.current.map((m) => m.id), [52, 51, 50]);
+    td.push({'@type': 'updateNewMessage', 'message': _msg(101)});
+    expect(repo.current.first.id, 52);
+    await repo.loadNewer();
+    expect(repo.detached, isFalse);
+  });
 }

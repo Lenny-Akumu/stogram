@@ -125,6 +125,85 @@ class MessagesRepository {
     }
   }
 
+  /// True after a jump into history until the newest messages are loaded again.
+  bool detached = false;
+
+  Future<List<TdObject>> _history(int from, int offset, int limit) async {
+    final res = await _td.send({
+      '@type': 'getChatHistory',
+      'chat_id': chatId,
+      'from_message_id': from,
+      'offset': offset,
+      'limit': limit,
+      'only_local': false,
+    });
+    return [
+      for (final m in (res['messages'] as List? ?? const [])) m as TdObject,
+    ];
+  }
+
+  /// Loads history around [id] unless it is already in memory.
+  Future<void> jumpTo(int id) async {
+    if (_byId.containsKey(id)) return;
+    final raw = await _history(id, -20, 40);
+    if (raw.isEmpty) return;
+    _byId.clear();
+    _reachedStart = false;
+    detached = true;
+    for (final m in raw) {
+      final msg = ChatMessage.fromJson(m);
+      _byId[msg.id] = msg;
+    }
+    _emit();
+  }
+
+  Future<void> loadNewer() async {
+    if (!detached || _loading || _current.isEmpty) return;
+    _loading = true;
+    try {
+      final newest = _current.first.id;
+      final raw = await _history(newest, -40, 41);
+      var added = 0;
+      for (final m in raw) {
+        final msg = ChatMessage.fromJson(m);
+        if (!_byId.containsKey(msg.id)) added++;
+        _byId[msg.id] = msg;
+      }
+      if (added == 0) detached = false;
+      _emit();
+    } finally {
+      _loading = false;
+    }
+  }
+
+  Future<void> returnToLatest() async {
+    if (!detached) return;
+    _byId.clear();
+    _reachedStart = false;
+    detached = false;
+    _emit();
+    await loadOlder();
+  }
+
+  Future<List<ChatMessage>> search(String query) async {
+    try {
+      final res = await _td.send({
+        '@type': 'searchChatMessages',
+        'chat_id': chatId,
+        'query': query,
+        'from_message_id': 0,
+        'offset': 0,
+        'limit': 50,
+      });
+      return [
+        for (final m in (res['messages'] as List? ?? const []))
+          ChatMessage.fromJson(m as TdObject),
+      ];
+    } on TdError {
+      return const [];
+    }
+  }
+
   Future<void> _mergeDeleted() async {
     final archive = _archive;
     if (archive == null || !_settings().saveDeleted) return;
@@ -544,6 +623,7 @@ class MessagesRepository {
     }
     switch (u['@type']) {
       case 'updateNewMessage':
+        if (detached) return;
         _put(ChatMessage.fromJson(u['message'] as TdObject));
       case 'updateMessageSendSucceeded' || 'updateMessageSendFailed':
         _byId.remove(u['old_message_id']);
