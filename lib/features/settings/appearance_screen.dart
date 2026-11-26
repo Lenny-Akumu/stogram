@@ -7,6 +7,7 @@ import '../../core/l10n/l10n.dart';
 import '../../ui/theme/chat_colors.dart';
 import '../../ui/theme/skin_provider.dart';
 import '../../ui/theme/skins.dart';
+import 'edge_tabs_settings.dart';
 
 class AppearanceScreen extends ConsumerWidget {
   const AppearanceScreen({super.key});
@@ -69,6 +70,8 @@ class AppearanceScreen extends ConsumerWidget {
                     l10n.layoutHint,
                     style: TextStyle(color: colors.secondary, fontSize: 13),
                   ),
+                  const SizedBox(height: 20),
+                  const EdgeTabsSettings(),
                 ],
               ),
             ),

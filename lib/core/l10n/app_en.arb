@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "appTitle": "Stogram",
+  "appTitle": "stogram",
   "actionNext": "Next",
   "actionLogOut": "Log out",
   "authPhoneTitle": "Sign in",
@@ -168,5 +168,21 @@
   "layoutClassic": "Classic",
   "layoutEdge": "Side panels",
   "layoutHint": "\"Side panels\": full-screen chat, chats and profile slide in from the edges — hover an edge or swipe.",
-  "skinLayoutNote2": "V3 and V4 open with side panels by default, the rest use the classic layout."
+  "skinLayoutNote2": "V3 and V4 open with side panels by default, the rest use the classic layout.",
+  "panelProfile": "Profile",
+  "panelEmoji": "Emoji",
+  "panelStickers": "Stickers",
+  "panelGifs": "GIFs",
+  "edgeTabsTitle": "Side tabs",
+  "edgeTabsLeft": "Left",
+  "edgeTabsRight": "Right",
+  "edgeTabsIcons": "Show icons on tabs",
+  "edgeTabsAdd": "Add tab",
+  "edgeTabsHint": "Each tab opens its own panel: hover it or tap it.",
+  "stickersEmpty": "No installed sticker sets",
+  "gifsEmpty": "No saved GIFs",
+  "openChatFirst": "Open a chat first",
+  "searchMessages": "Messages",
+  "panelPin": "Pin panel",
+  "panelUnpin": "Unpin panel"
 }

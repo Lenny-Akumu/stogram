@@ -6,6 +6,7 @@ import '../../core/tdlib/td_api.dart';
 import '../../core/tdlib/td_dispatcher.dart';
 import '../../core/tdlib/td_error.dart';
 import '../chats/chat_summary.dart';
+import '../stickers/stickers_repository.dart';
 import 'chat_message.dart';
 import 'message_media.dart';
 
@@ -172,6 +173,42 @@ class MessagesRepository {
     if (ayu.ghostMode && !ayu.readSilentlyOnReply) {
       await markRead(force: true);
     }
+  }
+
+  Future<void> sendSticker(StickerItem s) async {
+    final res = await _td.send({
+      '@type': 'sendMessage',
+      'chat_id': chatId,
+      'input_message_content': {
+        '@type': 'inputMessageSticker',
+        'sticker': {
+          '@type': 'inputSticker',
+          'sticker': {'@type': 'inputFileId', 'id': s.fileId},
+          'width': s.width,
+          'height': s.height,
+        },
+        'emoji': s.emoji,
+      },
+    });
+    _put(ChatMessage.fromJson(res));
+  }
+
+  Future<void> sendGif(GifItem g) async {
+    final res = await _td.send({
+      '@type': 'sendMessage',
+      'chat_id': chatId,
+      'input_message_content': {
+        '@type': 'inputMessageAnimation',
+        'animation': {
+          '@type': 'inputAnimation',
+          'animation': {'@type': 'inputFileId', 'id': g.fileId},
+          'duration': g.duration,
+          'width': g.width,
+          'height': g.height,
+        },
+      },
+    });
+    _put(ChatMessage.fromJson(res));
   }
 
   Future<void> editText(int messageId, String text) async {
