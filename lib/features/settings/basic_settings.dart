@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../app/providers.dart';
 import '../../core/ayu/ayu_settings.dart';
 import '../../core/l10n/l10n.dart';
+import '../../core/notify/notifier.dart';
 import '../../core/settings/app_prefs.dart';
 import '../../core/tdlib/td_dispatcher.dart';
 import '../../core/tdlib/td_error.dart';
@@ -484,6 +485,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       appBar: AppBar(title: Text(l10n.menuNotifications)),
       body: ListView(
         children: [
+          SwitchListTile(
+            title: Text(l10n.notifDevice),
+            subtitle: Text(l10n.notifDeviceHint),
+            value: ref.watch(notifyEnabledProvider),
+            onChanged: ref.read(notifyEnabledProvider.notifier).set,
+          ),
           for (final (i, s) in _scopes.indexed) ...[
             _header(context, titles[i]),
             if (_values[s] case final v?) ...[

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/l10n/l10n.dart';
 import '../ui/components/update_banner.dart';
+import '../core/notify/notifier.dart';
 import '../core/settings/app_prefs.dart';
 import 'providers.dart';
 import 'router.dart';
@@ -28,6 +29,7 @@ class App extends ConsumerWidget {
       ..watch(usersRepositoryProvider)
       ..watch(filesRepositoryProvider)
       ..watch(ayuArchiveProvider)
+      ..watch(notifierBootProvider)
       ..watch(ghostSyncProvider);
     final prefs = ref.watch(appPrefsProvider);
     return MaterialApp.router(

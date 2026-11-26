@@ -284,5 +284,7 @@
   "chatLeave": "Leave and delete",
   "chatDeleteAsk": "Delete «{title}»?",
   "folderAll": "All chats",
-  "archiveTitle": "Archive"
+  "archiveTitle": "Archive",
+  "notifDevice": "Notifications on this device",
+  "notifDeviceHint": "Show system notifications for new messages"
 }

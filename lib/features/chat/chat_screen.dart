@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 
 import '../../app/providers.dart';
 import '../../core/l10n/l10n.dart';
+import '../../core/notify/notifier.dart';
 import '../../core/settings/app_prefs.dart';
 import '../../core/tdlib/td_error.dart';
 import '../../data/chats/chat_summary.dart';
@@ -67,6 +68,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Future<void> _open() async {
     try {
+      unawaited(ref.read(messageNotifierProvider).clear(widget.chatId));
       await _repo.open();
       await _repo.markRead();
     } on TdError {
