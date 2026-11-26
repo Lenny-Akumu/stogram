@@ -1,6 +1,7 @@
 import 'package:app/app/app.dart';
 import 'package:app/app/providers.dart';
 import 'package:app/core/l10n/l10n.dart';
+import 'package:app/ui/shell/edge_panels.dart';
 import 'package:app/ui/shell/edge_shell.dart';
 import 'package:app/ui/shell/shell_switch.dart';
 import 'package:app/ui/theme/skin_provider.dart';
@@ -59,10 +60,14 @@ Future<FakeTd> _pump(WidgetTester t, Size size) async {
   return td;
 }
 
-double _leftPanelX(WidgetTester t) {
-  final text = find.text('Софія').last;
-  return t.getTopLeft(text).dx;
+double _panelX(WidgetTester t) {
+  final f = find.byType(EdgePanelView);
+  if (f.evaluate().isEmpty) return -1;
+  return t.getTopLeft(f.first).dx;
 }
+
+String _shown(WidgetTester t) =>
+    t.widget<EdgePanelView>(find.byType(EdgePanelView).first).panel.name;
 
 void main() {
   testWidgets('edge skins use the edge shell', (t) async {
@@ -70,39 +75,64 @@ void main() {
     expect(find.byType(EdgeShell), findsOneWidget);
   });
 
-  testWidgets('hovering the left edge opens chats, leaving closes', (t) async {
+  testWidgets('hovering a tab opens its panel, leaving closes', (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     await _pump(t, const Size(1400, 900));
-    expect(_leftPanelX(t), lessThan(0));
+    expect(_panelX(t), lessThan(0));
+    final l10n = await AppLocalizations.delegate.load(const Locale('uk'));
 
     final mouse = await t.createGesture(kind: PointerDeviceKind.mouse);
     addTearDown(mouse.removePointer);
     await mouse.addPointer(location: const Offset(700, 450));
     await t.pump();
-    await mouse.moveTo(const Offset(20, 450));
+    await mouse.moveTo(t.getCenter(find.byTooltip(l10n.chatsTitle).first));
     await t.pumpAndSettle();
-    expect(_leftPanelX(t), greaterThanOrEqualTo(0));
+    expect(_panelX(t), greaterThanOrEqualTo(0));
+    expect(_shown(t), 'chats');
+    expect(find.text('Софія'), findsWidgets);
 
     await mouse.moveTo(const Offset(1200, 450));
     await t.pumpAndSettle();
-    expect(_leftPanelX(t), lessThan(0));
+    expect(_panelX(t), lessThan(0));
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('phone swipe from the edge opens, tap on scrim closes', (
-    t,
-  ) async {
+  testWidgets('phone swipe opens the first tab, scrim tap closes', (t) async {
     await _pump(t, const Size(400, 800));
-    expect(_leftPanelX(t), lessThan(0));
-
     await t.dragFrom(const Offset(4, 400), const Offset(260, 0));
     await t.pumpAndSettle();
-    expect(_leftPanelX(t), greaterThanOrEqualTo(0));
+    expect(_panelX(t), greaterThanOrEqualTo(0));
+    expect(_shown(t), 'search');
 
-    await t.tapAt(const Offset(390, 400));
+    await t.tapAt(const Offset(345, 400));
     await t.pumpAndSettle();
-    expect(_leftPanelX(t), lessThan(0));
+    expect(_panelX(t), lessThan(0));
+  });
+
+  testWidgets('pinned panel stays, another tab replaces it for a while', (
+    t,
+  ) async {
+    await _pump(t, const Size(1400, 900));
+    final l10n = await AppLocalizations.delegate.load(const Locale('uk'));
+    await t.tap(find.byTooltip(l10n.chatsTitle).first);
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip(l10n.panelPin));
+    await t.pumpAndSettle();
+
+    await t.tapAt(const Offset(1000, 450));
+    await t.pumpAndSettle();
+    expect(_shown(t), 'chats');
+
+    await t.tap(find.byTooltip(l10n.menuAyu).first);
+    await t.pumpAndSettle();
+    expect(_shown(t), 'ayu');
+
+    await t.tap(find.byTooltip(l10n.menuAyu).first);
+    await t.pumpAndSettle();
+    await t.tapAt(const Offset(1000, 450));
+    await t.pumpAndSettle();
+    expect(_shown(t), 'chats');
   });
 
   testWidgets('layout override puts a classic skin into the edge shell', (

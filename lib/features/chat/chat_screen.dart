@@ -287,8 +287,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  void _insertText(String text) {
+    final sel = _input.selection;
+    final value = _input.text;
+    final start = sel.isValid ? sel.start : value.length;
+    final end = sel.isValid ? sel.end : value.length;
+    _input.text = value.replaceRange(start, end, text);
+    _input.selection = TextSelection.collapsed(offset: start + text.length);
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen(composerInsertProvider, (_, next) {
+      if (next.$1 > 0) _insertText(next.$2);
+    });
     ref.listen(messagesProvider(widget.chatId), (_, next) {
       final v = next.value;
       if (v != null) _onMessages(v);

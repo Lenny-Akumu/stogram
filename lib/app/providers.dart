@@ -12,6 +12,7 @@ import '../data/chats/chat_summary.dart';
 import '../data/chats/chats_repository.dart';
 import '../data/files/files_repository.dart';
 import '../data/messages/chat_message.dart';
+import '../data/stickers/stickers_repository.dart';
 import '../data/messages/messages_repository.dart';
 import '../data/users/users_repository.dart';
 
@@ -130,3 +131,20 @@ final ghostSyncProvider = Provider<void>((ref) {
       if (next.value is AuthReady) apply();
     }, fireImmediately: true);
 });
+
+final stickersRepositoryProvider = Provider<StickersRepository>(
+  (ref) => StickersRepository(ref.watch(tdApiProvider)),
+);
+
+/// Text a side panel asks the open composer to insert, with a counter so
+/// the same emoji twice still fires.
+final composerInsertProvider = NotifierProvider<ComposerInsert, (int, String)>(
+  ComposerInsert.new,
+);
+
+class ComposerInsert extends Notifier<(int, String)> {
+  @override
+  (int, String) build() => (0, '');
+
+  void insert(String text) => state = (state.$1 + 1, text);
+}

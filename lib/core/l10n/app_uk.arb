@@ -1,6 +1,6 @@
 {
   "@@locale": "uk",
-  "appTitle": "Stogram",
+  "appTitle": "stogram",
   "actionNext": "Далі",
   "actionLogOut": "Вийти",
   "authPhoneTitle": "Вхід",
@@ -367,5 +367,21 @@
   "layoutClassic": "Класична",
   "layoutEdge": "Бокові панелі",
   "layoutHint": "«Бокові панелі»: чат на весь екран, список чатів і профіль виїжджають з країв — наведи мишку на край або свайпни.",
-  "skinLayoutNote2": "V3 і V4 за замовчуванням відкриваються з боковими панелями, решта — у класичній розкладці."
+  "skinLayoutNote2": "V3 і V4 за замовчуванням відкриваються з боковими панелями, решта — у класичній розкладці.",
+  "panelProfile": "Профіль",
+  "panelEmoji": "Емодзі",
+  "panelStickers": "Стікери",
+  "panelGifs": "GIF",
+  "edgeTabsTitle": "Бокові прапорці",
+  "edgeTabsLeft": "Ліворуч",
+  "edgeTabsRight": "Праворуч",
+  "edgeTabsIcons": "Показувати іконки на прапорцях",
+  "edgeTabsAdd": "Додати прапорець",
+  "edgeTabsHint": "Кожен прапорець відкриває свою панель: наведи на нього мишкою або тапни.",
+  "stickersEmpty": "Немає встановлених наборів стікерів",
+  "gifsEmpty": "Немає збережених GIF",
+  "openChatFirst": "Спершу відкрий чат",
+  "searchMessages": "Повідомлення",
+  "panelPin": "Закріпити панель",
+  "panelUnpin": "Відкріпити панель"
 }

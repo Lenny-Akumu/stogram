@@ -20,6 +20,13 @@ class _Chat {
   TdObject? lastMessage;
 }
 
+class FoundMessage {
+  const FoundMessage(this.chatId, this.messageId, this.text);
+  final int chatId;
+  final int messageId;
+  final String text;
+}
+
 class ChatsRepository {
   ChatsRepository(this._td) {
     _sub = _td.updates.listen(_onUpdate);
@@ -57,6 +64,32 @@ class ChatsRepository {
       }
     } finally {
       _loading = false;
+    }
+  }
+
+  Future<List<FoundMessage>> searchMessages(String query) async {
+    try {
+      final res = await _td.send({
+        '@type': 'searchMessages',
+        'chat_list': null,
+        'query': query,
+        'offset': '',
+        'limit': 30,
+        'filter': null,
+        'chat_type_filter': null,
+        'min_date': 0,
+        'max_date': 0,
+      });
+      return [
+        for (final m in (res['messages'] as List? ?? const []).cast<TdObject>())
+          FoundMessage(
+            m['chat_id'] as int,
+            m['id'] as int,
+            MessagePreview.fromContent(m['content'] as TdObject).text,
+          ),
+      ];
+    } on TdError {
+      return const [];
     }
   }
 
