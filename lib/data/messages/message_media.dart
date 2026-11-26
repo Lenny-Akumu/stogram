@@ -23,7 +23,14 @@ sealed class MessageMedia {
       'messageDocument' => _document(content['document'] as TdObject?),
       'messageAudio' => _audio(content['audio'] as TdObject?),
       'messageVoiceNote' => _voice(content['voice_note'] as TdObject?),
-      _ => null,
+      'messagePoll' => PollMedia.fromJson(content['poll'] as TdObject?),
+      'messageLocation' || 'messageVenue' => _location(content),
+      'messageContact' => _contact(content['contact'] as TdObject?),
+      'messageDice' => DiceMedia(
+        content['emoji'] as String? ?? '🎲',
+        content['value'] as int? ?? 0,
+      ),
+      _ => ServiceMedia.fromContent(content),
     };
   }
 
@@ -266,5 +273,229 @@ VoiceMedia? _voice(TdObject? v) {
     fileId: file?['id'] as int?,
     file: file,
     waveform: decodeWaveform(v['waveform']),
+  );
+}
+
+class PollOption {
+  const PollOption({
+    required this.text,
+    required this.voters,
+    required this.percent,
+    required this.chosen,
+  });
+  final String text;
+  final int voters;
+  final int percent;
+  final bool chosen;
+}
+
+class PollMedia extends MessageMedia {
+  const PollMedia({
+    required this.id,
+    required this.question,
+    required this.options,
+    required this.total,
+    this.isQuiz = false,
+    this.correct = const [],
+    this.explanation = '',
+    this.multiple = false,
+    this.anonymous = true,
+    this.closed = false,
+  });
+
+  static PollMedia? fromJson(TdObject? p) {
+    if (p == null) return null;
+    final type = p['type'] as TdObject? ?? const {};
+    return PollMedia(
+      id: p['id'] as int? ?? 0,
+      question: (p['question'] as TdObject?)?['text'] as String? ?? '',
+      options: [
+        for (final o in (p['options'] as List? ?? const []))
+          if (o is TdObject)
+            PollOption(
+              text: (o['text'] as TdObject?)?['text'] as String? ?? '',
+              voters: o['voter_count'] as int? ?? 0,
+              percent: o['vote_percentage'] as int? ?? 0,
+              chosen: o['is_chosen'] == true,
+            ),
+      ],
+      total: p['total_voter_count'] as int? ?? 0,
+      isQuiz: type['@type'] == 'pollTypeQuiz',
+      correct: [
+        for (final i in (type['correct_option_ids'] as List? ?? const []))
+          i as int,
+      ],
+      explanation: (type['explanation'] as TdObject?)?['text'] as String? ?? '',
+      multiple: p['allows_multiple_answers'] == true,
+      anonymous: p['is_anonymous'] != false,
+      closed: p['is_closed'] == true,
+    );
+  }
+
+  final int id;
+  final String question;
+  final List<PollOption> options;
+  final int total;
+  final bool isQuiz;
+  final List<int> correct;
+  final String explanation;
+  final bool multiple;
+  final bool anonymous;
+  final bool closed;
+
+  bool get voted => options.any((o) => o.chosen);
+  bool get showResults => voted || closed;
+
+  @override
+  List<TdObject> get files => const [];
+}
+
+class LocationMedia extends MessageMedia {
+  const LocationMedia(this.lat, this.lon, {this.title = '', this.address = ''});
+  final double lat;
+  final double lon;
+  final String title;
+  final String address;
+
+  String get mapUrl =>
+      'https://www.openstreetmap.org/?mlat=$lat&mlon=$lon#map=16/$lat/$lon';
+
+  @override
+  List<TdObject> get files => const [];
+}
+
+class ContactMedia extends MessageMedia {
+  const ContactMedia({required this.name, required this.phone, this.userId});
+  final String name;
+  final String phone;
+  final int? userId;
+
+  @override
+  List<TdObject> get files => const [];
+}
+
+class DiceMedia extends MessageMedia {
+  const DiceMedia(this.emoji, this.value);
+  final String emoji;
+  final int value;
+
+  @override
+  List<TdObject> get files => const [];
+}
+
+enum ServiceKind {
+  created,
+  title,
+  photo,
+  photoRemoved,
+  joined,
+  joinedByLink,
+  added,
+  removed,
+  pinned,
+  screenshot,
+  upgraded,
+  autoDelete,
+  contactJoined,
+  call,
+  custom,
+}
+
+/// Chat events shown as a centered pill instead of a bubble.
+class ServiceMedia extends MessageMedia {
+  const ServiceMedia(
+    this.kind, {
+    this.users = const [],
+    this.text = '',
+    this.messageId,
+    this.seconds = 0,
+  });
+
+  static ServiceMedia? fromContent(TdObject c) {
+    List<int> ids(String key) => [
+      for (final i in (c[key] as List? ?? const [])) i as int,
+    ];
+    return switch (c['@type']) {
+      'messageBasicGroupChatCreate' || 'messageSupergroupChatCreate' =>
+        ServiceMedia(ServiceKind.created, text: c['title'] as String? ?? ''),
+      'messageChatChangeTitle' => ServiceMedia(
+        ServiceKind.title,
+        text: c['title'] as String? ?? '',
+      ),
+      'messageChatChangePhoto' => const ServiceMedia(ServiceKind.photo),
+      'messageChatDeletePhoto' => const ServiceMedia(ServiceKind.photoRemoved),
+      'messageChatAddMembers' => ServiceMedia(
+        ServiceKind.added,
+        users: ids('member_user_ids'),
+      ),
+      'messageChatJoinByLink' || 'messageChatJoinByRequest' =>
+        const ServiceMedia(ServiceKind.joinedByLink),
+      'messageChatDeleteMember' => ServiceMedia(
+        ServiceKind.removed,
+        users: [c['user_id'] as int? ?? 0],
+      ),
+      'messagePinMessage' => ServiceMedia(
+        ServiceKind.pinned,
+        messageId: c['message_id'] as int?,
+      ),
+      'messageScreenshotTaken' => const ServiceMedia(ServiceKind.screenshot),
+      'messageChatUpgradeTo' ||
+      'messageChatUpgradeFrom' => const ServiceMedia(ServiceKind.upgraded),
+      'messageChatSetMessageAutoDeleteTime' => ServiceMedia(
+        ServiceKind.autoDelete,
+        seconds: c['message_auto_delete_time'] as int? ?? 0,
+      ),
+      'messageContactRegistered' => const ServiceMedia(
+        ServiceKind.contactJoined,
+      ),
+      'messageCall' => ServiceMedia(
+        ServiceKind.call,
+        seconds: c['duration'] as int? ?? 0,
+        text: c['is_video'] == true ? 'video' : '',
+      ),
+      'messageCustomServiceAction' => ServiceMedia(
+        ServiceKind.custom,
+        text: c['text'] as String? ?? '',
+      ),
+      _ => null,
+    };
+  }
+
+  final ServiceKind kind;
+  final List<int> users;
+  final String text;
+  final int? messageId;
+  final int seconds;
+
+  /// Calls look like normal bubbles in Telegram, everything else is a pill.
+  bool get isPill => kind != ServiceKind.call;
+
+  @override
+  List<TdObject> get files => const [];
+}
+
+LocationMedia? _location(TdObject c) {
+  final venue = c['venue'] as TdObject?;
+  final loc = (venue?['location'] ?? c['location']) as TdObject?;
+  if (loc == null) return null;
+  return LocationMedia(
+    (loc['latitude'] as num?)?.toDouble() ?? 0,
+    (loc['longitude'] as num?)?.toDouble() ?? 0,
+    title: venue?['title'] as String? ?? '',
+    address: venue?['address'] as String? ?? '',
+  );
+}
+
+ContactMedia? _contact(TdObject? c) {
+  if (c == null) return null;
+  final name = [
+    c['first_name'] as String? ?? '',
+    c['last_name'] as String? ?? '',
+  ].where((s) => s.isNotEmpty).join(' ');
+  final uid = c['user_id'] as int? ?? 0;
+  return ContactMedia(
+    name: name,
+    phone: c['phone_number'] as String? ?? '',
+    userId: uid == 0 ? null : uid,
   );
 }

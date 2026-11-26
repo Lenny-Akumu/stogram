@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
 import '../../core/l10n/l10n.dart';
@@ -15,6 +16,7 @@ import '../../data/files/files_repository.dart';
 import '../../data/messages/message_media.dart';
 import '../../ui/components/td_image.dart';
 import '../../ui/theme/chat_colors.dart';
+import 'poll_view.dart';
 
 class MediaView extends StatelessWidget {
   const MediaView({
@@ -22,11 +24,15 @@ class MediaView extends StatelessWidget {
     required this.media,
     required this.maxWidth,
     this.outgoing = false,
+    this.chatId = 0,
+    this.messageId = 0,
   });
 
   final MessageMedia media;
   final double maxWidth;
   final bool outgoing;
+  final int chatId;
+  final int messageId;
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +81,20 @@ class MediaView extends StatelessWidget {
       final DocumentMedia d => _DocumentTile(media: d),
       final VoiceMedia v => _VoiceTile(media: v, outgoing: outgoing),
       final AudioMedia a => _AudioTile(media: a, outgoing: outgoing),
+      final PollMedia p => PollView(
+        poll: p,
+        chatId: chatId,
+        messageId: messageId,
+        outgoing: outgoing,
+        width: math.min(maxWidth, 320),
+      ),
+      final LocationMedia l => _LocationTile(media: l, outgoing: outgoing),
+      final ContactMedia c => _ContactTile(media: c, outgoing: outgoing),
+      DiceMedia(:final emoji, :final value) => Tooltip(
+        message: '$value',
+        child: Text(emoji, style: const TextStyle(fontSize: 72)),
+      ),
+      ServiceMedia() => const SizedBox.shrink(),
     };
   }
 }
@@ -774,3 +794,99 @@ String formatSize(int bytes) {
 }
 
 Widget _noControls(VideoState _) => const SizedBox.shrink();
+
+class _LocationTile extends StatelessWidget {
+  const _LocationTile({required this.media, required this.outgoing});
+  final LocationMedia media;
+  final bool outgoing;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = ChatColors.of(context);
+    final accent = outgoing ? colors.textOut : colors.accent;
+    return InkWell(
+      onTap: () => unawaited(
+        launchUrl(
+          Uri.parse(media.mapUrl),
+          mode: LaunchMode.externalApplication,
+        ),
+      ),
+      child: Container(
+        width: 240,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.location_on, color: accent, size: 34),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    media.title.isEmpty
+                        ? context.l10n.previewLocation
+                        : media.title,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    media.address.isEmpty
+                        ? '${media.lat.toStringAsFixed(5)}, '
+                              '${media.lon.toStringAsFixed(5)}'
+                        : media.address,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ContactTile extends StatelessWidget {
+  const _ContactTile({required this.media, required this.outgoing});
+  final ContactMedia media;
+  final bool outgoing;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = ChatColors.of(context);
+    final accent = outgoing ? colors.textOut : colors.accent;
+    return SizedBox(
+      width: 240,
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: accent.withValues(alpha: 0.2),
+            child: Icon(Icons.person, color: accent),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  media.name,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                SelectableText(
+                  media.phone,
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

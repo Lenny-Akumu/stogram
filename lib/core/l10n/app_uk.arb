@@ -383,5 +383,177 @@
   "openChatFirst": "Спершу відкрий чат",
   "searchMessages": "Повідомлення",
   "panelPin": "Закріпити панель",
-  "panelUnpin": "Відкріпити панель"
+  "panelUnpin": "Відкріпити панель",
+  "pollClosed": "Завершене",
+  "pollAnonymous": "Анонімне",
+  "pollPublic": "Публічне",
+  "pollQuiz": "Вікторина",
+  "pollVote": "Голосувати",
+  "pollVoters": "{count, plural, =0{Ще ніхто не голосував} one{{count} голос} few{{count} голоси} other{{count} голосів}}",
+  "@pollVoters": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pollRetract": "Скасувати голос",
+  "pollNew": "Опитування",
+  "pollQuestion": "Питання",
+  "pollOption": "Варіант {n}",
+  "@pollOption": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pollAddOption": "Додати варіант",
+  "pollMultiple": "Кілька відповідей",
+  "botButtonUnsupported": "Ця кнопка поки не підтримується",
+  "botCommands": "Команди бота",
+  "botKeyboard": "Клавіатура бота",
+  "svcCreated": "{who} створює групу «{title}»",
+  "@svcCreated": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "svcTitle": "{who} змінює назву на «{title}»",
+  "@svcTitle": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "svcPhoto": "{who} змінює фото групи",
+  "@svcPhoto": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "svcPhotoRemoved": "{who} видаляє фото групи",
+  "@svcPhotoRemoved": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "svcJoined": "{who} приєднується до групи",
+  "@svcJoined": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "svcAdded": "{who} додає {names}",
+  "@svcAdded": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      },
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "svcLeft": "{who} виходить з групи",
+  "@svcLeft": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "svcRemoved": "{who} видаляє {names}",
+  "@svcRemoved": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      },
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "svcPinned": "{who} закріплює повідомлення",
+  "@svcPinned": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "svcScreenshot": "{who} робить знімок екрана",
+  "@svcScreenshot": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "svcUpgraded": "Групу перетворено на супергрупу",
+  "svcAutoDelete": "{who} вмикає автовидалення",
+  "@svcAutoDelete": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "svcAutoDeleteOff": "Автовидалення вимкнено",
+  "svcContactJoined": "{who} тепер тут",
+  "@svcContactJoined": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "svcCall": "Дзвінок ({duration})",
+  "@svcCall": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "svcCallMissed": "Пропущений дзвінок",
+  "fmtBold": "Жирний",
+  "fmtItalic": "Курсив",
+  "fmtStrike": "Закреслений",
+  "fmtSpoiler": "Спойлер",
+  "fmtCode": "Код",
+  "fmtPre": "Блок коду",
+  "fmtLink": "Посилання",
+  "actionForward": "Переслати",
+  "actionPin": "Закріпити",
+  "actionUnpin": "Відкріпити",
+  "forwardTo": "Переслати в…",
+  "forwarded": "Переслано",
+  "attachFile": "Файл, фото чи відео",
+  "attachDice": "Кубик та ігри",
+  "attach": "Прикріпити",
+  "forwardedFrom": "Переслано від {name}",
+  "@forwardedFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pinnedMessage": "Закріплене повідомлення"
 }
