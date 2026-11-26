@@ -29,6 +29,50 @@ class AppearanceScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(l10n.appearanceTitle)),
       body: CustomScrollView(
         slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            sliver: SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.layoutTitle,
+                    style: TextStyle(
+                      color: colors.accent,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SegmentedButton<LayoutMode>(
+                    showSelectedIcon: false,
+                    segments: [
+                      ButtonSegment(
+                        value: LayoutMode.auto,
+                        label: Text(l10n.layoutAuto),
+                      ),
+                      ButtonSegment(
+                        value: LayoutMode.classic,
+                        label: Text(l10n.layoutClassic),
+                      ),
+                      ButtonSegment(
+                        value: LayoutMode.edge,
+                        label: Text(l10n.layoutEdge),
+                      ),
+                    ],
+                    selected: {ref.watch(layoutModeProvider)},
+                    onSelectionChanged: (v) => unawaited(
+                      ref.read(layoutModeProvider.notifier).select(v.first),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.layoutHint,
+                    style: TextStyle(color: colors.secondary, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ),
           for (final group in SkinGroup.values) ...[
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
@@ -65,7 +109,7 @@ class AppearanceScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             sliver: SliverToBoxAdapter(
               child: Text(
-                l10n.skinLayoutNote,
+                l10n.skinLayoutNote2,
                 style: TextStyle(color: colors.secondary, fontSize: 13),
               ),
             ),

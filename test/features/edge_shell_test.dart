@@ -104,4 +104,33 @@ void main() {
     await t.pumpAndSettle();
     expect(_leftPanelX(t), lessThan(0));
   });
+
+  testWidgets('layout override puts a classic skin into the edge shell', (
+    t,
+  ) async {
+    t.view.physicalSize = const Size(1400, 900);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tdApiProvider.overrideWithValue(FakeTd()),
+          layoutModeProvider.overrideWith(_ForceEdge.new),
+        ],
+        child: const MaterialApp(
+          locale: Locale('uk'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: appLocalizationDelegates,
+          home: ShellSwitch(),
+        ),
+      ),
+    );
+    await t.pump();
+    expect(find.byType(EdgeShell), findsOneWidget);
+  });
+}
+
+class _ForceEdge extends LayoutSetting {
+  @override
+  LayoutMode build() => LayoutMode.edge;
 }

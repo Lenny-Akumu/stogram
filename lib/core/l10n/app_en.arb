@@ -155,7 +155,6 @@
   "skinGroupV3": "V3 — full-screen chat",
   "skinGroupV2": "V2 — alternative",
   "skinGroupV1": "V1 — classic layouts",
-  "skinLayoutNote": "For now every design changes colors and fonts. Their own layouts come next.",
   "previewIncoming": "Hi! How are you?",
   "previewOutgoing": "All good 👌",
   "monolithDeleted": "DELETED · KEPT",
@@ -163,5 +162,11 @@
   "edgeHintMobile": "Swipe from the left edge for chats",
   "ayuOn": "ON",
   "ayuOff": "OFF",
-  "edgeTools": "Tools"
+  "edgeTools": "Tools",
+  "layoutTitle": "Layout",
+  "layoutAuto": "By design",
+  "layoutClassic": "Classic",
+  "layoutEdge": "Side panels",
+  "layoutHint": "\"Side panels\": full-screen chat, chats and profile slide in from the edges — hover an edge or swipe.",
+  "skinLayoutNote2": "V3 and V4 open with side panels by default, the rest use the classic layout."
 }

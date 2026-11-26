@@ -7,6 +7,7 @@ import '../../app/providers.dart';
 import '../../core/l10n/l10n.dart';
 import '../../core/util/chat_date.dart';
 import '../../data/chats/chat_summary.dart';
+import '../../ui/components/audio_bar.dart';
 import '../../ui/components/avatar.dart';
 import '../../ui/components/preview_text.dart';
 import '../../ui/components/presence_text.dart';
@@ -102,22 +103,29 @@ class _ChatListPaneState extends ConsumerState<ChatListPane> {
         ),
         actions: const [SizedBox(width: 12)],
       ),
-      body: chats.isEmpty
-          ? Center(
-              child: allLoaded || q.isNotEmpty
-                  ? Text(l10n.chatsEmpty)
-                  : const CircularProgressIndicator(),
-            )
-          : ListView.builder(
-              controller: _scroll,
-              itemCount: chats.length,
-              itemExtent: 72,
-              itemBuilder: (context, i) => ChatTile(
-                chat: chats[i],
-                selected: chats[i].id == widget.selectedId,
-                onTap: () => widget.onOpen(chats[i].id),
-              ),
-            ),
+      body: Column(
+        children: [
+          const AudioBar(),
+          Expanded(
+            child: chats.isEmpty
+                ? Center(
+                    child: allLoaded || q.isNotEmpty
+                        ? Text(l10n.chatsEmpty)
+                        : const CircularProgressIndicator(),
+                  )
+                : ListView.builder(
+                    controller: _scroll,
+                    itemCount: chats.length,
+                    itemExtent: 72,
+                    itemBuilder: (context, i) => ChatTile(
+                      chat: chats[i],
+                      selected: chats[i].id == widget.selectedId,
+                      onTap: () => widget.onOpen(chats[i].id),
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }
