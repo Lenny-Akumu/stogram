@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/l10n/l10n.dart';
 import '../ui/components/update_banner.dart';
+import '../core/settings/app_prefs.dart';
 import 'providers.dart';
 import 'router.dart';
 import '../ui/theme/skin_provider.dart';
@@ -28,15 +29,20 @@ class App extends ConsumerWidget {
       ..watch(filesRepositoryProvider)
       ..watch(ayuArchiveProvider)
       ..watch(ghostSyncProvider);
+    final prefs = ref.watch(appPrefsProvider);
     return MaterialApp.router(
       onGenerateTitle: (context) => context.l10n.appTitle,
       theme: buildSkinTheme(ref.watch(skinProvider)),
       localizationsDelegates: appLocalizationDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('uk'),
+      locale: prefs.locale,
       routerConfig: ref.watch(routerProvider),
-      builder: (context, child) =>
-          UpdateGate(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(prefs.textScale)),
+        child: UpdateGate(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }

@@ -76,6 +76,27 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => unawaited(context.push(Routes.ayu)),
           ),
           const Divider(),
+          for (final (icon, title, route) in [
+            (
+              Icons.notifications_none,
+              l10n.menuNotifications,
+              Routes.notifications,
+            ),
+            (Icons.lock_outline, l10n.menuPrivacy, Routes.privacy),
+            (Icons.devices, l10n.menuSessions, Routes.sessions),
+            (
+              Icons.chat_bubble_outline,
+              l10n.menuChatSettings,
+              Routes.chatSettings,
+            ),
+            (Icons.storage_outlined, l10n.menuStorage, Routes.storage),
+          ])
+            ListTile(
+              leading: Icon(icon),
+              title: Text(title),
+              onTap: () => unawaited(context.push(route)),
+            ),
+          const Divider(),
           ListTile(
             leading: Icon(Icons.logout, color: colors.deleted),
             title: Text(

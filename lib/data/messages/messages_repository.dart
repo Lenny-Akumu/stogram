@@ -334,6 +334,41 @@ class MessagesRepository {
     _emit();
   }
 
+  Future<void> toggleReaction(ChatMessage m, String emoji) => _td.send({
+    '@type': m.reactions.any((r) => r.emoji == emoji && r.chosen)
+        ? 'removeMessageReaction'
+        : 'addMessageReaction',
+    'chat_id': chatId,
+    'message_id': m.id,
+    'reaction_type': {'@type': 'reactionTypeEmoji', 'emoji': emoji},
+    'is_big': false,
+    'update_recent_reactions': true,
+  });
+
+  Future<List<String>> availableReactions(int messageId) async {
+    try {
+      final res = await _td.send({
+        '@type': 'getMessageAvailableReactions',
+        'chat_id': chatId,
+        'message_id': messageId,
+        'row_size': 8,
+      });
+      return <String>{
+        for (final key in [
+          'top_reactions',
+          'recent_reactions',
+          'popular_reactions',
+        ])
+          for (final r in (res[key] as List? ?? const []))
+            if (((r as TdObject)['type'] as TdObject?)?['emoji']
+                case final String e)
+              e,
+      }.toList();
+    } on TdError {
+      return const [];
+    }
+  }
+
   Future<void> votePoll(int messageId, List<int> options) => _td.send({
     '@type': 'setPollAnswer',
     'chat_id': chatId,
@@ -547,6 +582,13 @@ class MessagesRepository {
             }),
           );
         }
+        _emit();
+      case 'updateMessageInteractionInfo':
+        final m = _byId[u['message_id']];
+        if (m == null) return;
+        _byId[m.id] = m.copyWith(
+          reactions: Reaction.listOf(u['interaction_info'] as TdObject?),
+        );
         _emit();
       case 'updateMessageIsPinned':
         unawaited(loadPinned());

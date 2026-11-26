@@ -26,6 +26,7 @@ class ChatMessage {
     this.forward,
     this.viaBotId,
     this.isPinned = false,
+    this.reactions = const [],
   });
 
   factory ChatMessage.fromJson(TdObject json) {
@@ -61,6 +62,7 @@ class ChatMessage {
           ? null
           : json['via_bot_user_id'] as int?,
       isPinned: json['is_pinned'] == true,
+      reactions: Reaction.listOf(json['interaction_info'] as TdObject?),
     );
   }
 
@@ -89,6 +91,7 @@ class ChatMessage {
   final ForwardOrigin? forward;
   final int? viaBotId;
   final bool isPinned;
+  final List<Reaction> reactions;
 
   static TdObject? formattedOf(TdObject content) =>
       (content['text'] ?? content['caption']) as TdObject?;
@@ -114,6 +117,7 @@ class ChatMessage {
     TdObject? formatted,
     ReplyMarkup? markup,
     bool? isPinned,
+    List<Reaction>? reactions,
   }) => ChatMessage(
     id: id,
     chatId: chatId,
@@ -133,6 +137,7 @@ class ChatMessage {
     forward: forward,
     viaBotId: viaBotId,
     isPinned: isPinned ?? this.isPinned,
+    reactions: reactions ?? this.reactions,
   );
 
   static DateTime _time(Object? seconds) =>
@@ -198,4 +203,27 @@ class ForwardOrigin {
   final int? userId;
   final int? chatId;
   final String name;
+}
+
+class Reaction {
+  const Reaction(this.emoji, this.count, {this.chosen = false});
+
+  static List<Reaction> listOf(TdObject? info) {
+    final list =
+        ((info?['reactions'] as TdObject?)?['reactions'] as List?) ?? const [];
+    return [
+      for (final r in list)
+        if (r is TdObject &&
+            (r['type'] as TdObject?)?['@type'] == 'reactionTypeEmoji')
+          Reaction(
+            (r['type'] as TdObject)['emoji'] as String? ?? '',
+            r['total_count'] as int? ?? 0,
+            chosen: r['is_chosen'] == true,
+          ),
+    ];
+  }
+
+  final String emoji;
+  final int count;
+  final bool chosen;
 }
