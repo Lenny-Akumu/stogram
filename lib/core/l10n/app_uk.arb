@@ -617,5 +617,34 @@
   },
   "notifDevice": "Сповіщення на цьому пристрої",
   "notifDeviceHint": "Показувати системні сповіщення про нові повідомлення",
-  "searchInChat": "Пошук у чаті"
+  "searchInChat": "Пошук у чаті",
+  "fxNone": "Немає",
+  "fxChipmunk": "Бурундук",
+  "fxRobot": "Робот",
+  "fxStadium": "Стадіон",
+  "fxDemon": "Демон",
+  "fxAutotune": "Автотюн",
+  "fxIntercom": "Домофон",
+  "fxKaraoke": "Караоке",
+  "fxTitle": "Ефекти голосу",
+  "fxChange": "Змінити голос",
+  "fxNoEffect": "Без ефекту",
+  "voiceRecord": "Записати голосове",
+  "voiceStop": "Зупинити",
+  "voiceNoMic": "Немає доступу до мікрофона",
+  "voiceEncodeError": "Не вдалося обробити запис: {error}",
+  "menuSound": "Звук",
+  "soundRecording": "Запис голосових і кружечків",
+  "soundDenoise": "Шумодав",
+  "soundDenoiseHint": "Прибирає фоновий шум: вулиця, вентилятор, гул",
+  "soundDenoiseStrength": "Сила шумодава",
+  "soundEcho": "Придушення відлуння",
+  "soundGain": "Автопідсилення гучності",
+  "@voiceEncodeError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -29,6 +30,7 @@ import '../../ui/theme/skin_provider.dart';
 import 'chat_extras.dart';
 import 'media_view.dart';
 import 'poll_view.dart';
+import 'voice_record.dart';
 
 enum _Mode { send, reply, edit }
 
@@ -54,6 +56,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _showDown = false;
   bool _keyboardOpen = true;
   bool _searching = false;
+  bool _recording = false;
   final _searchCtl = TextEditingController();
   List<ChatMessage> _results = const [];
   Timer? _searchDebounce;
@@ -776,21 +779,40 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 unawaited(_guard(() => _repo.sendText('/${c.command}')));
               },
             ),
-          _Composer(
-            controller: _input,
-            focusNode: _inputFocus,
-            onSend: _submit,
-            onTyping: () => unawaited(_repo.sendTyping()),
-            editing: _mode == _Mode.edit,
-            onAttach: _attach,
-            hasCommands: _repo.commands.isNotEmpty,
-            onCommands: () => setState(() => _commandsOpen = !_commandsOpen),
-            hasKeyboard: _repo.replyKeyboard != null,
-            keyboardOpen: _keyboardOpen,
-            onKeyboard: () => setState(() => _keyboardOpen = !_keyboardOpen),
-            hint: _repo.replyKeyboard?.placeholder,
-            sendWithEnter: ref.watch(appPrefsProvider).sendWithEnter,
-          ),
+          if (_recording)
+            VoiceComposer(
+              onClose: () => setState(() => _recording = false),
+              onSend: (v) async {
+                final reply = _mode == _Mode.reply ? _target?.id : null;
+                if (reply != null) _setMode(_Mode.send);
+                if (_repo.detached) await _repo.returnToLatest();
+                await _guard(
+                  () => _repo.sendVoice(
+                    v.path,
+                    duration: v.duration,
+                    waveform: base64Encode(v.waveform),
+                    replyTo: reply,
+                  ),
+                );
+              },
+            )
+          else
+            _Composer(
+              onMic: () => setState(() => _recording = true),
+              controller: _input,
+              focusNode: _inputFocus,
+              onSend: _submit,
+              onTyping: () => unawaited(_repo.sendTyping()),
+              editing: _mode == _Mode.edit,
+              onAttach: _attach,
+              hasCommands: _repo.commands.isNotEmpty,
+              onCommands: () => setState(() => _commandsOpen = !_commandsOpen),
+              hasKeyboard: _repo.replyKeyboard != null,
+              keyboardOpen: _keyboardOpen,
+              onKeyboard: () => setState(() => _keyboardOpen = !_keyboardOpen),
+              hint: _repo.replyKeyboard?.placeholder,
+              sendWithEnter: ref.watch(appPrefsProvider).sendWithEnter,
+            ),
           if (_repo.replyKeyboard case final k? when _keyboardOpen)
             ReplyKeyboardView(keyboard: k, onPress: _pressReply),
         ],
@@ -1446,8 +1468,10 @@ class _Composer extends StatelessWidget {
     this.keyboardOpen = false,
     this.hint,
     this.sendWithEnter = true,
+    this.onMic,
   });
 
+  final VoidCallback? onMic;
   final bool sendWithEnter;
   final TextEditingController controller;
   final FocusNode focusNode;
@@ -1606,13 +1630,28 @@ class _Composer extends StatelessWidget {
                     keyboardOpen ? Icons.keyboard_hide : Icons.keyboard,
                   ),
                 ),
-              IconButton(
-                tooltip: editing
-                    ? context.l10n.actionSave
-                    : context.l10n.actionSend,
-                color: colors.accent,
-                onPressed: onSend,
-                icon: Icon(editing ? Icons.check_circle : Icons.send),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: controller,
+                builder: (context, v, _) {
+                  final mic =
+                      !editing && onMic != null && v.text.trim().isEmpty;
+                  return IconButton(
+                    tooltip: mic
+                        ? context.l10n.voiceRecord
+                        : editing
+                        ? context.l10n.actionSave
+                        : context.l10n.actionSend,
+                    color: colors.accent,
+                    onPressed: mic ? onMic : onSend,
+                    icon: Icon(
+                      mic
+                          ? Icons.mic_none
+                          : editing
+                          ? Icons.check_circle
+                          : Icons.send,
+                    ),
+                  );
+                },
               ),
             ],
           ),
