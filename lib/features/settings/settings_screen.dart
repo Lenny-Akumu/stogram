@@ -89,6 +89,7 @@ class SettingsScreen extends ConsumerWidget {
               l10n.menuChatSettings,
               Routes.chatSettings,
             ),
+            (Icons.graphic_eq, l10n.menuSound, Routes.sound),
             (Icons.storage_outlined, l10n.menuStorage, Routes.storage),
           ])
             ListTile(

@@ -9,6 +9,7 @@ import '../../core/ayu/ayu_settings.dart';
 import '../../core/l10n/l10n.dart';
 import '../../core/notify/notifier.dart';
 import '../../core/settings/app_prefs.dart';
+import '../../core/settings/voice_prefs.dart';
 import '../../core/tdlib/td_dispatcher.dart';
 import '../../core/tdlib/td_error.dart';
 import '../../ui/components/avatar.dart';
@@ -666,6 +667,57 @@ class ChatSettingsScreen extends ConsumerWidget {
             ),
             value: prefs.sendWithEnter,
             onChanged: n.setSendWithEnter,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class SoundSettingsScreen extends ConsumerWidget {
+  const SoundSettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final colors = ChatColors.of(context);
+    final v = ref.watch(voicePrefsProvider);
+    final n = ref.read(voicePrefsProvider.notifier);
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.menuSound)),
+      body: ListView(
+        children: [
+          _header(context, l10n.soundRecording),
+          SwitchListTile(
+            title: Text(l10n.soundDenoise),
+            subtitle: Text(
+              l10n.soundDenoiseHint,
+              style: TextStyle(color: colors.secondary),
+            ),
+            value: v.denoise,
+            onChanged: (on) => n.update(v.copyWith(denoise: on)),
+          ),
+          ListTile(
+            enabled: v.denoise,
+            title: Text(l10n.soundDenoiseStrength),
+            subtitle: Slider(
+              value: v.strength,
+              divisions: 10,
+              label: '${(v.strength * 100).round()}%',
+              onChanged: v.denoise
+                  ? (x) => n.update(v.copyWith(strength: x))
+                  : null,
+            ),
+          ),
+          SwitchListTile(
+            title: Text(l10n.soundEcho),
+            value: v.echoCancel,
+            onChanged: (on) => n.update(v.copyWith(echoCancel: on)),
+          ),
+          SwitchListTile(
+            title: Text(l10n.soundGain),
+            value: v.autoGain,
+            onChanged: (on) => n.update(v.copyWith(autoGain: on)),
           ),
         ],
       ),

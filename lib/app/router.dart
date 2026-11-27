@@ -25,6 +25,7 @@ abstract final class Routes {
   static const notifications = '/settings/notifications';
   static const storage = '/settings/storage';
   static const chatSettings = '/settings/chat';
+  static const sound = '/settings/sound';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -63,6 +64,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(path: 'storage', builder: (_, _) => const StorageScreen()),
           GoRoute(path: 'chat', builder: (_, _) => const ChatSettingsScreen()),
+          GoRoute(
+            path: 'sound',
+            builder: (_, _) => const SoundSettingsScreen(),
+          ),
         ],
       ),
       GoRoute(path: Routes.auth, builder: (_, _) => const AuthScreen()),

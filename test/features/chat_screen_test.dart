@@ -82,7 +82,9 @@ void main() {
     expect(find.text('ку'), findsOneWidget);
     expect(td.sent.map((r) => r['@type']), contains('viewMessages'));
 
+    expect(find.byIcon(Icons.mic_none), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'як ти');
+    await tester.pump();
     await tester.tap(find.byIcon(Icons.send));
     await tester.pumpAndSettle();
 
@@ -114,6 +116,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'ага');
+    await tester.pump();
     await tester.tap(find.byIcon(Icons.send));
     await tester.pumpAndSettle();
 

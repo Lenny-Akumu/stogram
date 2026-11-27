@@ -398,6 +398,26 @@ class MessagesRepository {
     _put(ChatMessage.fromJson(res));
   }
 
+  Future<void> sendVoice(
+    String path, {
+    required int duration,
+    required String waveform,
+    int? replyTo,
+  }) async {
+    final res = await _td.send({
+      '@type': 'sendMessage',
+      'chat_id': chatId,
+      'reply_to': ?_replyTo(replyTo),
+      'input_message_content': {
+        '@type': 'inputMessageVoiceNote',
+        'voice_note': {'@type': 'inputFileLocal', 'path': path},
+        'duration': duration,
+        'waveform': waveform,
+      },
+    });
+    _put(ChatMessage.fromJson(res));
+  }
+
   ChatMessage? pinned;
 
   Future<void> loadPinned() async {
